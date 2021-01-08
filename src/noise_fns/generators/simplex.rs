@@ -141,13 +141,9 @@ impl NoiseFn<[f64; 2]> for Simplex {
 
 /// 3-dimensional Simplex noise
 ///
-/// 3D Simplex noise is patented in the US per Patent #US6867776B2. Only 3D simplex noise is
-/// patented. The patent is scheduled to expire January 8, 2022. Until then, use of this function
-/// may constitute patent infringement depending on the local jurisdiction. Use at your own risk.
-///
-/// If you need 3D Simplex noise and are in a restricted jurisdiction, I suggest using 4D Simplex
-/// noise and ignoring the 4th dimension. Simplex noise for any dimension other than 3 is not
-/// patented.
+/// 3D Simplex noise is patented in the US per Patent #US6867776B2. The patent is scheduled to
+/// expire January 8, 2022. Until then, use of this function may constitute patent infringement
+/// depending on the local jurisdiction. Use at your own risk.
 impl NoiseFn<[f64; 3]> for Simplex {
     fn get(&self, point: [f64; 3]) -> f64 {
         #[inline]
@@ -248,6 +244,10 @@ impl NoiseFn<[f64; 3]> for Simplex {
 }
 
 /// 4-dimensional Simplex noise
+///
+/// 4D Simplex noise is patented in the US per Patent #US6867776B2, claim 5. The patent is
+/// scheduled to expire January 8, 2022. Until then, use of this function may constitute patent
+/// infringement depending on the local jurisdiction. Use at your own risk.
 impl NoiseFn<[f64; 4]> for Simplex {
     fn get(&self, point: [f64; 4]) -> f64 {
         #[inline]
