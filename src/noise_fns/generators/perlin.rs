@@ -1,7 +1,7 @@
 use vek::{Vec2, Vec3, Vec4};
 
 use crate::{
-    math::{self, interpolate},
+    math::{self, s_curve::quintic::Quintic},
     noise_fns::{NoiseFn, Seedable},
     permutationtable::{NoiseHasher, PermutationTable},
 };
@@ -89,8 +89,7 @@ pub(crate) fn perlin_2d(hasher: &dyn NoiseHasher, point: Vec2<f64>) -> f64 {
     let g01 = gradient_dot_v(hasher.hash(&(corner + [0, 1])), distance - [0.0, 1.0]);
     let g11 = gradient_dot_v(hasher.hash(&(corner + [1, 1])), distance - [1.0, 1.0]);
 
-    let a = interpolate::s_curve5(distance[0]);
-    let b = interpolate::s_curve5(distance[1]);
+    let [a, b] = distance.quintic().into_array();
 
     let k0 = g00;
     let k1 = g10 - g00;
@@ -183,9 +182,7 @@ pub(crate) fn perlin_3d(hasher: &dyn NoiseHasher, point: Vec3<f64>) -> f64 {
         distance - [1.0, 1.0, 1.0],
     );
 
-    let a = interpolate::s_curve5(distance[0]);
-    let b = interpolate::s_curve5(distance[1]);
-    let c = interpolate::s_curve5(distance[2]);
+    let [a, b, c] = distance.quintic().into_array();
 
     let k0 = g000;
     let k1 = g100 - g000;
@@ -326,10 +323,7 @@ pub(crate) fn perlin_4d(hasher: &dyn NoiseHasher, point: Vec4<f64>) -> f64 {
         distance - [1.0, 1.0, 1.0, 1.0],
     );
 
-    let a = interpolate::s_curve5(distance[0]);
-    let b = interpolate::s_curve5(distance[1]);
-    let c = interpolate::s_curve5(distance[2]);
-    let d = interpolate::s_curve5(distance[3]);
+    let [a, b, c, d] = distance.quintic().into_array();
 
     let k0 = g0000;
     let k1 = g1000 - g0000;
