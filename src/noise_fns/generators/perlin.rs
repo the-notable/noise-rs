@@ -1,3 +1,5 @@
+use vek::{Vec2, Vec3, Vec4};
+
 use crate::{
     math::{self, interpolate},
     noise_fns::{NoiseFn, Seedable},
@@ -51,12 +53,16 @@ impl Seedable for Perlin {
 /// 2-dimensional perlin noise
 impl NoiseFn<[f64; 2]> for Perlin {
     fn get(&self, point: [f64; 2]) -> f64 {
-        perlin_2d(&self.perm_table, point)
+        perlin_2d(&self.perm_table, Vec2::from(point))
     }
 }
 
 #[inline(always)]
-pub(crate) fn perlin_2d(hasher: &dyn NoiseHasher, point: [f64; 2]) -> f64 {
+pub(crate) fn perlin_2d(hasher: &dyn NoiseHasher, point: Vec2<f64>) -> f64 {
+    let floored = point.floor();
+    let corner = floored.as_();
+    let distance = point - floored;
+
     // Unscaled range of linearly interpolated perlin noise should be (-sqrt(N)/2, sqrt(N)/2).
     // Need to invert this value and multiply the unscaled result by the value to get a scaled
     // range of (-1, 1).
@@ -66,10 +72,10 @@ pub(crate) fn perlin_2d(hasher: &dyn NoiseHasher, point: [f64; 2]) -> f64 {
 
     #[inline(always)]
     #[rustfmt::skip]
-    fn gradient_dot_v(perm: usize, point: [f64; 2]) -> f64 {
-        let [x, y] = point;
+    fn gradient_dot_v(hash: usize, point: Vec2<f64>) -> f64 {
+        let [x, y] = point.into_array();
 
-        match perm & 0b11 {
+        match hash & 0b11 {
             0 =>  x + y, // ( 1,  1)
             1 => -x + y, // (-1,  1)
             2 =>  x - y, // ( 1, -1)
@@ -78,27 +84,20 @@ pub(crate) fn perlin_2d(hasher: &dyn NoiseHasher, point: [f64; 2]) -> f64 {
         }
     }
 
-    let floored = math::map2(point, f64::floor);
-    let corner = math::to_isize2(floored);
-    let far_corner = math::add2(corner, [1; 2]);
-    let distance = math::sub2(point, floored);
-    let far_distance = math::sub2(distance, [1.0; 2]);
-
     let g00 = gradient_dot_v(hasher.hash(&corner), distance);
-    let g10 = gradient_dot_v(
-        hasher.hash(&[far_corner[0], corner[1]]),
-        [far_distance[0], distance[1]],
-    );
-    let g01 = gradient_dot_v(
-        hasher.hash(&[corner[0], far_corner[1]]),
-        [distance[0], far_distance[1]],
-    );
-    let g11 = gradient_dot_v(hasher.hash(&far_corner), far_distance);
+    let g10 = gradient_dot_v(hasher.hash(&(corner + [1, 0])), distance - [1.0, 0.0]);
+    let g01 = gradient_dot_v(hasher.hash(&(corner + [0, 1])), distance - [0.0, 1.0]);
+    let g11 = gradient_dot_v(hasher.hash(&(corner + [1, 1])), distance - [1.0, 1.0]);
 
-    let u = interpolate::s_curve5(distance[0]);
-    let v = interpolate::s_curve5(distance[1]);
+    let a = interpolate::s_curve5(distance[0]);
+    let b = interpolate::s_curve5(distance[1]);
 
-    let unscaled_result = bilinear_interpolation(u, v, g00, g01, g10, g11);
+    let k0 = g00;
+    let k1 = g10 - g00;
+    let k2 = g01 - g00;
+    let k3 = g00 + g11 - g10 - g01;
+
+    let unscaled_result = k0 + k1 * a + k2 * b + k3 * a * b;
 
     let scaled_result = unscaled_result * SCALE_FACTOR;
 
@@ -108,26 +107,20 @@ pub(crate) fn perlin_2d(hasher: &dyn NoiseHasher, point: [f64; 2]) -> f64 {
     math::clamp(scaled_result, -1.0, 1.0)
 }
 
-#[inline(always)]
-fn bilinear_interpolation(u: f64, v: f64, g00: f64, g01: f64, g10: f64, g11: f64) -> f64 {
-    let k0 = g00;
-    let k1 = g10 - g00;
-    let k2 = g01 - g00;
-    let k3 = g00 + g11 - g10 - g01;
-
-    k0 + k1 * u + k2 * v + k3 * u * v
-}
-
 /// 3-dimensional perlin noise
 impl NoiseFn<[f64; 3]> for Perlin {
     fn get(&self, point: [f64; 3]) -> f64 {
-        perlin_3d(&self.perm_table, point)
+        perlin_3d(&self.perm_table, Vec3::from(point))
     }
 }
 
 #[inline(always)]
 #[allow(clippy::many_single_char_names)]
-pub(crate) fn perlin_3d(hasher: &dyn NoiseHasher, point: [f64; 3]) -> f64 {
+pub(crate) fn perlin_3d(hasher: &dyn NoiseHasher, point: Vec3<f64>) -> f64 {
+    let floored = point.floor();
+    let corner = floored.as_();
+    let distance = point - floored;
+
     // Unscaled range of linearly interpolated perlin noise should be (-sqrt(N)/2, sqrt(N)/2).
     // Need to invert this value and multiply the unscaled result by the value to get a scaled
     // range of (-1, 1).
@@ -140,10 +133,10 @@ pub(crate) fn perlin_3d(hasher: &dyn NoiseHasher, point: [f64; 3]) -> f64 {
 
     #[inline(always)]
     #[rustfmt::skip]
-    fn gradient_dot_v(perm: usize, point: [f64; 3]) -> f64 {
-        let [x, y, z] = point;
+    fn gradient_dot_v(hash: usize, point: Vec3<f64>) -> f64 {
+        let [x, y, z] = point.into_array();
 
-        match perm & 0b1111 {
+        match hash & 0b1111 {
             0  | 12 =>  x + y    , // ( 1,  1,  0)
             1  | 13 => -x + y    , // (-1,  1,  0)
             2       =>  x - y    , // ( 1, -1,  0)
@@ -160,38 +153,35 @@ pub(crate) fn perlin_3d(hasher: &dyn NoiseHasher, point: [f64; 3]) -> f64 {
         }
     }
 
-    let floored = math::map3(point, f64::floor);
-    let corner = math::to_isize3(floored);
-    let far_corner = math::add3(corner, [1; 3]);
-    let distance = math::sub3(point, floored);
-    let far_distance = math::sub3(distance, [1.0; 3]);
-
     let g000 = gradient_dot_v(hasher.hash(&corner), distance);
     let g100 = gradient_dot_v(
-        hasher.hash(&[far_corner[0], corner[1], corner[2]]),
-        [far_distance[0], distance[1], distance[2]],
+        hasher.hash(&(corner + [1, 0, 0])),
+        distance - [1.0, 0.0, 0.0],
     );
     let g010 = gradient_dot_v(
-        hasher.hash(&[corner[0], far_corner[1], corner[2]]),
-        [distance[0], far_distance[1], distance[2]],
+        hasher.hash(&(corner + [0, 1, 0])),
+        distance - [0.0, 1.0, 0.0],
     );
     let g110 = gradient_dot_v(
-        hasher.hash(&[far_corner[0], far_corner[1], corner[2]]),
-        [far_distance[0], far_distance[1], distance[2]],
+        hasher.hash(&(corner + [1, 1, 0])),
+        distance - [1.0, 1.0, 0.0],
     );
     let g001 = gradient_dot_v(
-        hasher.hash(&[corner[0], corner[1], far_corner[2]]),
-        [distance[0], distance[1], far_distance[2]],
+        hasher.hash(&(corner + [0, 0, 1])),
+        distance - [0.0, 0.0, 1.0],
     );
     let g101 = gradient_dot_v(
-        hasher.hash(&[far_corner[0], corner[1], far_corner[2]]),
-        [far_distance[0], distance[1], far_distance[2]],
+        hasher.hash(&(corner + [1, 0, 1])),
+        distance - [1.0, 0.0, 1.0],
     );
     let g011 = gradient_dot_v(
-        hasher.hash(&[corner[0], far_corner[1], far_corner[2]]),
-        [distance[0], far_distance[1], far_distance[2]],
+        hasher.hash(&(corner + [0, 1, 1])),
+        distance - [0.0, 1.0, 1.0],
     );
-    let g111 = gradient_dot_v(hasher.hash(&far_corner), far_distance);
+    let g111 = gradient_dot_v(
+        hasher.hash(&(corner + [1, 1, 1])),
+        distance - [1.0, 1.0, 1.0],
+    );
 
     let a = interpolate::s_curve5(distance[0]);
     let b = interpolate::s_curve5(distance[1]);
@@ -220,22 +210,26 @@ pub(crate) fn perlin_3d(hasher: &dyn NoiseHasher, point: [f64; 3]) -> f64 {
 /// 4-dimensional perlin noise
 impl NoiseFn<[f64; 4]> for Perlin {
     fn get(&self, point: [f64; 4]) -> f64 {
-        perlin_4d(&self.perm_table, point)
+        perlin_4d(&self.perm_table, Vec4::from(point))
     }
 }
 
 #[inline(always)]
-#[rustfmt::skip]
 #[allow(clippy::many_single_char_names)]
-pub(crate) fn perlin_4d(hasher: &dyn NoiseHasher, point: [f64; 4]) -> f64 {
+pub(crate) fn perlin_4d(hasher: &dyn NoiseHasher, point: Vec4<f64>) -> f64 {
+    let floored = point.floor();
+    let corner = floored.as_();
+    let distance = point - floored;
+
     // Unscaled range of linearly interpolated perlin noise should be (-sqrt(N)/2, sqrt(N)/2).
     // Need to invert this value and multiply the unscaled result by the value to get a scaled
     // range of (-1, 1).
     const SCALE_FACTOR: f64 = 1.0; // 1/(sqrt(N)/2), N=4 -> 2/sqrt(4) -> 2/2 -> 1
 
     #[inline(always)]
-    fn gradient_dot_v(perm: usize, point: [f64; 4]) -> f64 {
-        let [x, y, z, w] = point;
+    #[rustfmt::skip]
+    fn gradient_dot_v(perm: usize, point: Vec4<f64>) -> f64 {
+        let [x, y, z, w] = point.into_array();
 
         match perm & 0b11111 {
             0  | 28 =>  x + y + z    , // ( 1,  1,  1,  0)
@@ -270,190 +264,66 @@ pub(crate) fn perlin_4d(hasher: &dyn NoiseHasher, point: [f64; 4]) -> f64 {
         }
     }
 
-    let floored = math::map4(point, f64::floor);
-    let corner = math::to_isize4(floored);
-    let far_corner = math::add4(corner, [1; 4]);
-    let distance = math::sub4(point, floored);
-    let far_distance = math::sub4(distance, [1.0; 4]);
-
-    let g0000 = gradient_dot_v(
-        hasher.hash(&corner),
-        distance,
-    );
+    let g0000 = gradient_dot_v(hasher.hash(&corner), distance);
     let g1000 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            corner[1],
-            corner[2],
-            corner[3],
-        ]),
-        [far_distance[0],
-        distance[1],
-        distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [1, 0, 0, 0])),
+        distance - [1.0, 0.0, 0.0, 0.0],
     );
     let g0100 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            far_corner[1],
-            corner[2],
-            corner[3],
-        ]),
-        [distance[0],
-        far_distance[1],
-        distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [0, 1, 0, 0])),
+        distance - [0.0, 1.0, 0.0, 0.0],
     );
     let g1100 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            far_corner[1],
-            corner[2],
-            corner[3]
-        ]),
-        [far_distance[0],
-        far_distance[1],
-        distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [1, 1, 0, 0])),
+        distance - [1.0, 1.0, 0.0, 0.0],
     );
     let g0010 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            corner[1],
-            far_corner[2],
-            corner[3],
-        ]),
-        [distance[0],
-        distance[1],
-        far_distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [0, 0, 1, 0])),
+        distance - [0.0, 0.0, 1.0, 0.0],
     );
     let g1010 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            corner[1],
-            far_corner[2],
-            corner[3]
-        ]),
-        [far_distance[0],
-        distance[1],
-        far_distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [1, 0, 1, 0])),
+        distance - [1.0, 0.0, 1.0, 0.0],
     );
     let g0110 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            far_corner[1],
-            far_corner[2],
-            corner[3]
-        ]),
-        [distance[0],
-        far_distance[1],
-        far_distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [0, 1, 1, 0])),
+        distance - [0.0, 1.0, 1.0, 0.0],
     );
     let g1110 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            far_corner[1],
-            far_corner[2],
-            corner[3]
-        ]),
-        [far_distance[0],
-        far_distance[1],
-        far_distance[2],
-        distance[3]],
+        hasher.hash(&(corner + [1, 1, 1, 0])),
+        distance - [1.0, 1.0, 1.0, 0.0],
     );
     let g0001 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            corner[1],
-            corner[2],
-            far_corner[3],
-        ]),
-        [distance[0],
-        distance[1],
-        distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [0, 0, 0, 1])),
+        distance - [0.0, 0.0, 0.0, 1.0],
     );
     let g1001 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            corner[1],
-            corner[2],
-            far_corner[3]
-        ]),
-        [far_distance[0],
-        distance[1],
-        distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [1, 0, 0, 1])),
+        distance - [1.0, 0.0, 0.0, 1.0],
     );
     let g0101 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            far_corner[1],
-            corner[2],
-            far_corner[3]
-        ]),
-        [distance[0],
-        far_distance[1],
-        distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [0, 1, 0, 1])),
+        distance - [0.0, 1.0, 0.0, 1.0],
     );
     let g1101 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            far_corner[1],
-            corner[2],
-            far_corner[3]
-        ]),
-        [far_distance[0],
-        far_distance[1],
-        distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [1, 1, 0, 1])),
+        distance - [1.0, 1.0, 0.0, 1.0],
     );
     let g0011 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            corner[1],
-            far_corner[2],
-            far_corner[3]
-        ]),
-        [distance[0],
-        distance[1],
-        far_distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [0, 0, 1, 1])),
+        distance - [0.0, 0.0, 1.0, 1.0],
     );
     let g1011 = gradient_dot_v(
-        hasher.hash(&[
-            far_corner[0],
-            corner[1],
-            far_corner[2],
-            far_corner[3]
-        ]),
-        [far_distance[0],
-        distance[1],
-        far_distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [1, 0, 1, 1])),
+        distance - [1.0, 0.0, 1.0, 1.0],
     );
     let g0111 = gradient_dot_v(
-        hasher.hash(&[
-            corner[0],
-            far_corner[1],
-            far_corner[2],
-            far_corner[3]
-        ]),
-        [distance[0],
-        far_distance[1],
-        far_distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [0, 1, 1, 1])),
+        distance - [0.0, 1.0, 1.0, 1.0],
     );
     let g1111 = gradient_dot_v(
-        hasher.hash(&far_corner),
-        [far_distance[0],
-        far_distance[1],
-        far_distance[2],
-        far_distance[3]],
+        hasher.hash(&(corner + [1, 1, 1, 1])),
+        distance - [1.0, 1.0, 1.0, 1.0],
     );
 
     let a = interpolate::s_curve5(distance[0]);
