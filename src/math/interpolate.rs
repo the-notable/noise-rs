@@ -1,3 +1,6 @@
+use num_traits::Float;
+use vek::{Vec2, Vec3, Vec4};
+
 /// Performs linear interpolation between two values.
 #[cfg(not(target_os = "emscripten"))]
 #[inline]
@@ -43,4 +46,88 @@ pub(crate) fn s_curve3(x: f64) -> f64 {
 #[inline]
 pub(crate) fn s_curve5(x: f64) -> f64 {
     x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
+}
+
+pub trait LinearInterpolate<T = Self> {
+    /// Performs linear interpolation between two values.
+    fn lerp(&self, lower: T, upper: T) -> Self;
+}
+
+impl LinearInterpolate for f32 {
+    #[cfg(not(target_os = "emscripten"))]
+    #[inline]
+    fn lerp(&self, lower: Self, upper: Self) -> Self {
+        self.mul_add(upper - lower, lower)
+    }
+
+    #[cfg(target_os = "emscripten")]
+    #[inline]
+    fn lerp(&self, lower: f64, upper: f64) -> Self {
+        (self * (upper - lower)) + lower
+    }
+}
+
+impl LinearInterpolate for f64 {
+    #[cfg(not(target_os = "emscripten"))]
+    #[inline]
+    fn lerp(&self, lower: Self, upper: Self) -> Self {
+        self.mul_add(upper - lower, lower)
+    }
+
+    #[cfg(target_os = "emscripten")]
+    #[inline]
+    fn lerp(&self, lower: f64, upper: f64) -> Self {
+        (self * (upper - lower)) + lower
+    }
+}
+
+impl<T> LinearInterpolate<T> for Vec2<T>
+where
+    T: Float,
+{
+    #[cfg(not(target_os = "emscripten"))]
+    #[inline]
+    fn lerp(&self, lower: T, upper: T) -> Self {
+        self.map(|a| a.mul_add(upper - lower, lower))
+    }
+
+    #[cfg(target_os = "emscripten")]
+    #[inline]
+    fn lerp(&self, lower: T, upper: T) -> Self {
+        self.map(|a| (a * (upper - lower)) + lower)
+    }
+}
+
+impl<T> LinearInterpolate<T> for Vec3<T>
+where
+    T: Float,
+{
+    #[cfg(not(target_os = "emscripten"))]
+    #[inline]
+    fn lerp(&self, lower: T, upper: T) -> Self {
+        self.map(|a| a.mul_add(upper - lower, lower))
+    }
+
+    #[cfg(target_os = "emscripten")]
+    #[inline]
+    fn lerp(&self, lower: T, upper: T) -> Self {
+        self.map(|a| (a * (upper - lower)) + lower)
+    }
+}
+
+impl<T> LinearInterpolate<T> for Vec4<T>
+where
+    T: Float,
+{
+    #[cfg(not(target_os = "emscripten"))]
+    #[inline]
+    fn lerp(&self, lower: T, upper: T) -> Self {
+        self.map(|a| a.mul_add(upper - lower, lower))
+    }
+
+    #[cfg(target_os = "emscripten")]
+    #[inline]
+    fn lerp(&self, lower: T, upper: T) -> Self {
+        self.map(|a| (a * (upper - lower)) + lower)
+    }
 }
