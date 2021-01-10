@@ -1,6 +1,8 @@
-use crate::math;
-
-use crate::noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable};
+use crate::{
+    math,
+    noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable},
+};
+use vek::{Vec2, Vec3, Vec4};
 
 /// Noise function that outputs heterogenous Multifractal noise.
 ///
@@ -122,18 +124,20 @@ impl Seedable for BasicMulti {
 
 /// 2-dimensional `BasicMulti` noise
 impl NoiseFn<[f64; 2]> for BasicMulti {
-    fn get(&self, mut point: [f64; 2]) -> f64 {
+    fn get(&self, point: [f64; 2]) -> f64 {
+        let mut point = Vec2::from(point);
+
         // First unscaled octave of function; later octaves are scaled.
-        point = math::mul2(point, self.frequency);
-        let mut result = self.sources[0].get(point);
+        point *= self.frequency;
+        let mut result = self.sources[0].get(point.into_array());
 
         // Spectral construction inner loop, where the fractal is built.
         for x in 1..self.octaves {
             // Raise the spatial frequency.
-            point = math::mul2(point, self.lacunarity);
+            point += self.lacunarity;
 
             // Get noise value.
-            let mut signal = self.sources[x].get(point);
+            let mut signal = self.sources[x].get(point.into_array());
 
             // Scale the amplitude appropriately for this frequency.
             signal *= self.persistence.powi(x as i32);
@@ -152,18 +156,21 @@ impl NoiseFn<[f64; 2]> for BasicMulti {
 
 /// 3-dimensional `BasicMulti` noise
 impl NoiseFn<[f64; 3]> for BasicMulti {
-    fn get(&self, mut point: [f64; 3]) -> f64 {
+    fn get(&self, point: [f64; 3]) -> f64 {
+        let mut point = Vec3::from(point);
+
         // First unscaled octave of function; later octaves are scaled.
-        point = math::mul3(point, self.frequency);
-        let mut result = self.sources[0].get(point);
+        point *= self.frequency;
+
+        let mut result = self.sources[0].get(point.into_array());
 
         // Spectral construction inner loop, where the fractal is built.
         for x in 1..self.octaves {
             // Raise the spatial frequency.
-            point = math::mul3(point, self.lacunarity);
+            point *= self.lacunarity;
 
             // Get noise value.
-            let mut signal = self.sources[x].get(point);
+            let mut signal = self.sources[x].get(point.into_array());
 
             // Scale the amplitude appropriately for this frequency.
             signal *= self.persistence.powi(x as i32);
@@ -182,18 +189,20 @@ impl NoiseFn<[f64; 3]> for BasicMulti {
 
 /// 4-dimensional `BasicMulti` noise
 impl NoiseFn<[f64; 4]> for BasicMulti {
-    fn get(&self, mut point: [f64; 4]) -> f64 {
+    fn get(&self, point: [f64; 4]) -> f64 {
+        let mut point = Vec4::from(point);
+
         // First unscaled octave of function; later octaves are scaled.
-        point = math::mul4(point, self.frequency);
-        let mut result = self.sources[0].get(point);
+        point *= self.frequency;
+        let mut result = self.sources[0].get(point.into_array());
 
         // Spectral construction inner loop, where the fractal is built.
         for x in 1..self.octaves {
             // Raise the spatial frequency.
-            point = math::mul4(point, self.lacunarity);
+            point *= self.lacunarity;
 
             // Get noise value.
-            let mut signal = self.sources[x].get(point);
+            let mut signal = self.sources[x].get(point.into_array());
 
             // Scale the amplitude appropriately for this frequency.
             signal *= self.persistence.powi(x as i32);
