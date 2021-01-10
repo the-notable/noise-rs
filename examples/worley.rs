@@ -17,8 +17,8 @@ fn main() {
 
     PlaneMapBuilder::new(
         &Worley::default()
-            .set_return_type(ReturnType::Distance)
-            .set_distance_function(euclidean_squared),
+            .set_distance_function(euclidean_squared)
+            .set_return_type(ReturnType::Distance),
     )
     .build()
     .write_to_file("worley_squared_distance.png");
@@ -27,9 +27,13 @@ fn main() {
         .build()
         .write_to_file("worley_manhattan.png");
 
-    PlaneMapBuilder::new(&Worley::default().set_return_type(ReturnType::Distance))
-        .build()
-        .write_to_file("worley_manhattan_distance.png");
+    PlaneMapBuilder::new(
+        &Worley::default()
+            .set_distance_function(manhattan)
+            .set_return_type(ReturnType::Distance),
+    )
+    .build()
+    .write_to_file("worley_manhattan_distance.png");
 
     PlaneMapBuilder::new(&Worley::default().set_distance_function(chebyshev))
         .build()
@@ -37,8 +41,8 @@ fn main() {
 
     PlaneMapBuilder::new(
         &Worley::default()
-            .set_return_type(ReturnType::Distance)
-            .set_distance_function(chebyshev),
+            .set_distance_function(chebyshev)
+            .set_return_type(ReturnType::Distance),
     )
     .build()
     .write_to_file("worley_chebyshev_distance.png");
