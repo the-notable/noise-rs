@@ -1,6 +1,7 @@
 extern crate noise;
 
 use noise::{utils::*, *};
+use bumpalo::Bump;
 
 /// This example demonstrates how to use the noise-rs library to generate
 /// terrain elevations for a complex planetary surface.
@@ -148,6 +149,8 @@ fn main() {
     /// Maximum depth of the rivers, in planetary elevation units.
     const RIVER_DEPTH: f64 = 0.0234375;
 
+    let arena = Bump::new();
+
     // ////////////////////////////////////////////////////////////////////////
     // Function group: continent definition
     // ////////////////////////////////////////////////////////////////////////
@@ -168,12 +171,15 @@ fn main() {
     // 1: [Continent module]: This FBM module generates the continents. This
     // noise function has a high number of octaves so that detail is visible at
     // high zoom levels.
-    let baseContinentDef_fb0 = Fbm::new()
-        .set_seed(CURRENT_SEED)
-        .set_frequency(CONTINENT_FREQUENCY)
-        .set_persistence(0.5)
-        .set_lacunarity(CONTINENT_LACUNARITY)
-        .set_octaves(14);
+
+    let baseContinentDef_fb0 = arena.alloc(
+        Fbm::new()
+            .set_seed(CURRENT_SEED)
+            .set_frequency(CONTINENT_FREQUENCY)
+            .set_persistence(0.5)
+            .set_lacunarity(CONTINENT_LACUNARITY)
+            .set_octaves(14)
+    );
 
     //    debug::render_noise_module("complexplanet_images/00_0_baseContinentDef_fb0\
     //    .png",
@@ -185,17 +191,19 @@ fn main() {
     // 2: [Continent-with-ranges module]: Next, a curve module modifies the
     // output value from the continent module so that very high values appear
     // near sea level. This defines the positions of the mountain ranges.
-    let baseContinentDef_cu = Curve::new(&baseContinentDef_fb0)
-        .add_control_point(-2.0000 + SEA_LEVEL, -1.625 + SEA_LEVEL)
-        .add_control_point(-1.0000 + SEA_LEVEL, -1.375 + SEA_LEVEL)
-        .add_control_point(0.0000 + SEA_LEVEL, -0.375 + SEA_LEVEL)
-        .add_control_point(0.0625 + SEA_LEVEL, 0.125 + SEA_LEVEL)
-        .add_control_point(0.1250 + SEA_LEVEL, 0.250 + SEA_LEVEL)
-        .add_control_point(0.2500 + SEA_LEVEL, 1.000 + SEA_LEVEL)
-        .add_control_point(0.5000 + SEA_LEVEL, 0.250 + SEA_LEVEL)
-        .add_control_point(0.7500 + SEA_LEVEL, 0.250 + SEA_LEVEL)
-        .add_control_point(1.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL)
-        .add_control_point(2.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL);
+    let baseContinentDef_cu = arena.alloc(
+        Curve::new(baseContinentDef_fb0)
+            .add_control_point(-2.0000 + SEA_LEVEL, -1.625 + SEA_LEVEL)
+            .add_control_point(-1.0000 + SEA_LEVEL, -1.375 + SEA_LEVEL)
+            .add_control_point(0.0000 + SEA_LEVEL, -0.375 + SEA_LEVEL)
+            .add_control_point(0.0625 + SEA_LEVEL, 0.125 + SEA_LEVEL)
+            .add_control_point(0.1250 + SEA_LEVEL, 0.250 + SEA_LEVEL)
+            .add_control_point(0.2500 + SEA_LEVEL, 1.000 + SEA_LEVEL)
+            .add_control_point(0.5000 + SEA_LEVEL, 0.250 + SEA_LEVEL)
+            .add_control_point(0.7500 + SEA_LEVEL, 0.250 + SEA_LEVEL)
+            .add_control_point(1.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL)
+            .add_control_point(2.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL)
+    );
 
     //    debug::render_noise_module("complexplanet_images/00_1_baseContinentDef_cu\
     //    .png",
@@ -208,12 +216,14 @@ fn main() {
     // used by subsequent noise functions to carve out chunks from the
     // mountain ranges within the continent-with-ranges module so that the
     // mountain ranges will not be completely impassible.
-    let baseContinentDef_fb1 = Fbm::new()
-        .set_seed(CURRENT_SEED + 1)
-        .set_frequency(CONTINENT_FREQUENCY * 4.34375)
-        .set_persistence(0.5)
-        .set_lacunarity(CONTINENT_LACUNARITY)
-        .set_octaves(11);
+    let baseContinentDef_fb1 = arena.alloc(
+        Fbm::new()
+            .set_seed(CURRENT_SEED + 1)
+            .set_frequency(CONTINENT_FREQUENCY * 4.34375)
+            .set_persistence(0.5)
+            .set_lacunarity(CONTINENT_LACUNARITY)
+            .set_octaves(11)
+    );
 
     //    debug::render_noise_module("complexplanet_images/00_2_baseContinentDef_fb1\
     //    .png",
@@ -225,9 +235,11 @@ fn main() {
     // 4: [Scaled-carver module]: This scale/bias module scales the output
     // value from the carver module such that it is usually near 1.0. This
     // is required for step 5.
-    let baseContinentDef_sb = ScaleBias::new(&baseContinentDef_fb1)
-        .set_scale(0.375)
-        .set_bias(0.625);
+    let baseContinentDef_sb = arena.alloc(
+        ScaleBias::new(baseContinentDef_fb1)
+            .set_scale(0.375)
+            .set_bias(0.625)
+    );
 
     //    debug::render_noise_module("complexplanet_images/00_3_baseContinentDef_sb\
     //    .png",
@@ -246,7 +258,9 @@ fn main() {
     // the output from the scaled-carver module will be less than the output
     // value from the continent-with-ranges module, so in this case, the output
     // value from the scaled-carver module is selected.
-    let baseContinentDef_mi = Min::new(&baseContinentDef_sb, &baseContinentDef_cu);
+    let baseContinentDef_mi = arena.alloc(
+        Min::new(baseContinentDef_sb, baseContinentDef_cu)
+    );
 
     //    debug::render_noise_module("complexplanet_images/00_4_baseContinentDef_mi\
     //    .png",
@@ -258,11 +272,11 @@ fn main() {
     // 6: [Clamped-continent module]: Finally, a clamp module modifies the
     // carved continent module to ensure that the output value of this subgroup
     // is between -1.0 and 1.0.
-    let baseContinentDef_cl = Clamp::new(&baseContinentDef_mi).set_bounds(-1.0, 1.0);
+    let baseContinentDef_cl = arena.alloc(Clamp::new(baseContinentDef_mi).set_bounds(-1.0, 1.0));
 
     // 7: [Base-continent-definition subgroup]: Caches the output value from
     // the clamped-continent module.
-    let baseContinentDef = Cache::new(baseContinentDef_cl);
+    let baseContinentDef = arena.alloc( Cache::new(baseContinentDef_cl));
 
     //    debug::render_noise_module("complexplanet_images/00_5_baseContinentDef.png",
     //                               &baseContinentDef,
@@ -286,11 +300,11 @@ fn main() {
     // 1: [Coarse-turbulence module]: This turbulence module warps the output
     // value from the base-continent-definition subgroup, adding some coarse
     // detail to it.
-    let continentDef_tu0 = Turbulence::new(&baseContinentDef)
+    let continentDef_tu0 = arena.alloc(Turbulence::new(baseContinentDef)
         .set_seed(CURRENT_SEED + 10)
         .set_frequency(CONTINENT_FREQUENCY * 15.25)
         .set_power(CONTINENT_FREQUENCY / 113.75)
-        .set_roughness(13);
+        .set_roughness(13));
 
     //    debug::render_noise_module("complexplanet_images/01_0_continentDef_tu0.png",
     //                               &continentDef_tu0,
@@ -302,11 +316,11 @@ fn main() {
     // output value from the coarse-turbulence module. This turbulence has a
     // higher frequency, but lower power, than the coarse-turbulence module,
     // adding some intermediate detail to it.
-    let continentDef_tu1 = Turbulence::new(continentDef_tu0)
+    let continentDef_tu1 = arena.alloc(Turbulence::new(continentDef_tu0)
         .set_seed(CURRENT_SEED + 11)
         .set_frequency(CONTINENT_FREQUENCY * 47.25)
         .set_power(CONTINENT_FREQUENCY / 433.75)
-        .set_roughness(12);
+        .set_roughness(12));
 
     //    debug::render_noise_module("complexplanet_images/01_1_continentDef_tu1.png",
     //                               &continentDef_tu1,
@@ -318,11 +332,11 @@ fn main() {
     // warps the output value from the intermediate-turbulence module. This
     // turbulence has a higher frequency, but lower power, than the
     // intermediate-turbulence module, adding some fine detail to it.
-    let continentDef_tu2 = Turbulence::new(continentDef_tu1)
+    let continentDef_tu2 = arena.alloc(Turbulence::new(continentDef_tu1)
         .set_seed(CURRENT_SEED + 12)
         .set_frequency(CONTINENT_FREQUENCY * 95.25)
         .set_power(CONTINENT_FREQUENCY / 1019.75)
-        .set_roughness(11);
+        .set_roughness(11));
 
     //    debug::render_noise_module("complexplanet_images/01_2_continentDef_tu2.png",
     //                               &continentDef_tu2,
@@ -340,9 +354,9 @@ fn main() {
     // transition.  In effect, only the higher areas of the base-continent-
     // definition subgroup become warped; the underwater and coastal areas
     // remain unaffected.
-    let continentDef_se = Select::new(&baseContinentDef, &continentDef_tu2, &baseContinentDef)
+    let continentDef_se = arena.alloc(Select::new(&baseContinentDef, continentDef_tu2, baseContinentDef)
         .set_bounds(SEA_LEVEL - 0.0375, SEA_LEVEL + 1000.0375)
-        .set_falloff(0.0625);
+        .set_falloff(0.0625));
 
     //    debug::render_noise_module("complexplanet_images/01_3_continentDef_se.png",
     //                               &continentDef_se,
@@ -353,7 +367,7 @@ fn main() {
     // 5: [Continent-definition group]: Caches the output value from the
     // clamped-continent module. This is the output value for the entire
     // continent-definition group.
-    let continentDef = Cache::new(continentDef_se);
+    let continentDef = arena.alloc(Cache::new(continentDef_se));
 
     //    debug::render_noise_module("complexplanet_images/01_4_continentDef.png",
     //                               &continentDef,
@@ -1739,7 +1753,7 @@ fn main() {
     //    );
 
     let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
+        .set_size(100, 100)
         .set_x_bounds(-2.0, 2.0)
         .set_y_bounds(-2.0, 2.0)
         .build();
@@ -1749,25 +1763,25 @@ fn main() {
         .render(&noise_map)
         .write_to_file("unscaledFinalPlanet.png");
 
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-0.5, 0.5)
-        .set_y_bounds(-0.5, 0.5)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet_4x_zoom.png");
-
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-0.0, 0.25)
-        .set_y_bounds(-0.125, 0.125)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet_16x_zoom.png");
+    // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
+    //     .set_size(1024, 1024)
+    //     .set_x_bounds(-0.5, 0.5)
+    //     .set_y_bounds(-0.5, 0.5)
+    //     .build();
+    //
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet_4x_zoom.png");
+    //
+    // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
+    //     .set_size(1024, 1024)
+    //     .set_x_bounds(-0.0, 0.25)
+    //     .set_y_bounds(-0.125, 0.125)
+    //     .build();
+    //
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet_16x_zoom.png");
 }
