@@ -16,7 +16,7 @@ use crate::{math::interpolate, noise_fns::NoiseFn};
 /// and output value, although no two control points can have the same input.
 pub struct Curve<'a, T, const DIM: usize> {
     /// Outputs a value.
-    pub source: &'a dyn NoiseFn<T, DIM>,
+    pub source: &'a Box<dyn NoiseFn<T, DIM>>,
 
     /// Vec that stores the control points.
     control_points: Vec<ControlPoint<f64>>,
@@ -28,7 +28,7 @@ struct ControlPoint<T> {
 }
 
 impl<'a, T, const DIM: usize> Curve<'a, T, DIM> {
-    pub fn new(source: &'a dyn NoiseFn<T, DIM>) -> Self {
+    pub fn new(source: &'a Box<dyn NoiseFn<T, DIM>>) -> Self {
         Self {
             source,
             control_points: Vec::with_capacity(4),

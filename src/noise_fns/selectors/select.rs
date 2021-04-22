@@ -7,16 +7,16 @@ use crate::{
 /// functions chosen by the output value from a control function.
 pub struct Select<'a, T, const DIM: usize> {
     /// Outputs a value.
-    pub source1: &'a dyn NoiseFn<T, DIM>,
+    pub source1: &'a Box<dyn NoiseFn<T, DIM>>,
 
     /// Outputs a value.
-    pub source2: &'a dyn NoiseFn<T, DIM>,
+    pub source2: &'a Box<dyn NoiseFn<T, DIM>>,
 
     /// Determines the value to select. If the output value from
     /// the control function is within a range of values know as the _selection
     /// range_, this noise function outputs the value from `source2`.
     /// Otherwise, this noise function outputs the value from `source1`.
-    pub control: &'a dyn NoiseFn<T, DIM>,
+    pub control: &'a Box<dyn NoiseFn<T, DIM>>,
 
     /// Bounds of the selection range. Default is 0.0 to 1.0.
     pub bounds: (f64, f64),
@@ -27,9 +27,9 @@ pub struct Select<'a, T, const DIM: usize> {
 
 impl<'a, T, const DIM: usize> Select<'a, T, DIM> {
     pub fn new(
-        source1: &'a dyn NoiseFn<T, DIM>,
-        source2: &'a dyn NoiseFn<T, DIM>,
-        control: &'a dyn NoiseFn<T, DIM>,
+        source1: &'a Box<dyn NoiseFn<T, DIM>>,
+        source2: &'a Box<dyn NoiseFn<T, DIM>>,
+        control: &'a Box<dyn NoiseFn<T, DIM>>,
     ) -> Self {
         Select {
             source1,

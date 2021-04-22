@@ -25,7 +25,7 @@ use crate::{math::interpolate, noise_fns::NoiseFn};
 /// stereotypical desert canyon.
 pub struct Terrace<'a, T, const DIM: usize> {
     /// Outputs a value.
-    pub source: &'a dyn NoiseFn<T, DIM>,
+    pub source: &'a Box<dyn NoiseFn<T, DIM>>,
 
     /// Determines if the terrace-forming curve between all control points is
     /// inverted.
@@ -36,7 +36,7 @@ pub struct Terrace<'a, T, const DIM: usize> {
 }
 
 impl<'a, T, const DIM: usize> Terrace<'a, T, DIM> {
-    pub fn new(source: &'a dyn NoiseFn<T, DIM>) -> Self {
+    pub fn new(source: &'a Box<dyn NoiseFn<T, DIM>>) -> Self {
         Terrace {
             source,
             invert_terraces: false,

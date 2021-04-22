@@ -7,7 +7,7 @@ use crate::noise_fns::NoiseFn;
 /// it with the scaling factor, adds the bias to it, then outputs the value.
 pub struct ScaleBias<'a, T, const DIM: usize> {
     /// Outputs a value.
-    pub source: &'a dyn NoiseFn<T, DIM>,
+    pub source: &'a Box<dyn NoiseFn<T, DIM>>,
 
     /// Scaling factor to apply to the output value from the source function.
     /// The default value is 1.0.
@@ -19,7 +19,7 @@ pub struct ScaleBias<'a, T, const DIM: usize> {
 }
 
 impl<'a, T, const DIM: usize> ScaleBias<'a, T, DIM> {
-    pub fn new(source: &'a dyn NoiseFn<T, DIM>) -> Self {
+    pub fn new(source: &'a Box<dyn NoiseFn<T, DIM>>) -> Self {
         Self {
             source,
             scale: 1.0,

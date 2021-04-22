@@ -1,6 +1,8 @@
 extern crate noise;
 
 use noise::{utils::*, *};
+use std::time::Instant;
+use std::collections::HashMap;
 
 /// This example demonstrates how to use the noise-rs library to generate
 /// terrain elevations for a complex planetary surface.
@@ -59,7 +61,7 @@ use noise::{utils::*, *};
 /// A description for each group and subgroup can be found above the source
 /// code for that group and subgroup.
 #[allow(non_snake_case)]
-fn main() {
+pub fn main() {
     /// Planet seed. Change this to generate a different planet.
     const CURRENT_SEED: u32 = 0;
 
@@ -148,6 +150,19 @@ fn main() {
     /// Maximum depth of the rivers, in planetary elevation units.
     const RIVER_DEPTH: f64 = 0.0234375;
 
+
+    const MAP_SIZE_WIDTH: usize = 200;
+    const MAP_SIZE_HEIGHT: usize = 200;
+    const MAP_LOWER_X_BOUND: f64 = -0.5;
+    const MAP_UPPER_X_BOUND: f64 = 0.5;
+    const MAP_LOWER_Y_BOUND: f64 = -0.5;
+    const MAP_UPPER_Y_BOUND: f64 = 0.5;
+
+    let now = Instant::now();
+    println!("Starting Complex Planet");
+
+    let mut builder = ModuleBuilder::new();
+
     // ////////////////////////////////////////////////////////////////////////
     // Function group: continent definition
     // ////////////////////////////////////////////////////////////////////////
@@ -168,12 +183,14 @@ fn main() {
     // 1: [Continent module]: This FBM module generates the continents. This
     // noise function has a high number of octaves so that detail is visible at
     // high zoom levels.
-    let baseContinentDef_fb0 = Fbm::new()
+    builder.push("baseContinentDef_fb0", Box::new(
+        Fbm::new()
         .set_seed(CURRENT_SEED)
         .set_frequency(CONTINENT_FREQUENCY)
         .set_persistence(0.5)
         .set_lacunarity(CONTINENT_LACUNARITY)
-        .set_octaves(14);
+        .set_octaves(14))
+    );
 
     //    debug::render_noise_module("complexplanet_images/00_0_baseContinentDef_fb0\
     //    .png",
@@ -185,7 +202,7 @@ fn main() {
     // 2: [Continent-with-ranges module]: Next, a curve module modifies the
     // output value from the continent module so that very high values appear
     // near sea level. This defines the positions of the mountain ranges.
-    let baseContinentDef_cu = Curve::new(&baseContinentDef_fb0)
+    let baseContinentDef_cu = Curve::new(builder.get_ref("baseContinentDef_fb0"))
         .add_control_point(-2.0000 + SEA_LEVEL, -1.625 + SEA_LEVEL)
         .add_control_point(-1.0000 + SEA_LEVEL, -1.375 + SEA_LEVEL)
         .add_control_point(0.0000 + SEA_LEVEL, -0.375 + SEA_LEVEL)
@@ -263,6 +280,7 @@ fn main() {
     // 7: [Base-continent-definition subgroup]: Caches the output value from
     // the clamped-continent module.
     let baseContinentDef = Cache::new(baseContinentDef_cl);
+    builder.push("baseContinentDef", Box::new(baseContinentDef));
 
     //    debug::render_noise_module("complexplanet_images/00_5_baseContinentDef.png",
     //                               &baseContinentDef,
@@ -286,7 +304,7 @@ fn main() {
     // 1: [Coarse-turbulence module]: This turbulence module warps the output
     // value from the base-continent-definition subgroup, adding some coarse
     // detail to it.
-    let continentDef_tu0 = Turbulence::new(&baseContinentDef)
+    let continentDef_tu0 = Turbulence::new(builder.get_ref("baseContinentDef"))
         .set_seed(CURRENT_SEED + 10)
         .set_frequency(CONTINENT_FREQUENCY * 15.25)
         .set_power(CONTINENT_FREQUENCY / 113.75)
@@ -340,7 +358,11 @@ fn main() {
     // transition.  In effect, only the higher areas of the base-continent-
     // definition subgroup become warped; the underwater and coastal areas
     // remain unaffected.
-    let continentDef_se = Select::new(&baseContinentDef, &continentDef_tu2, &baseContinentDef)
+    let continentDef_se = Select::new(
+        builder.get_ref("baseContinentDef"),
+        builder.get_ref("continentDef_tu2"),
+        builder.get_ref("baseContinentDef")
+    )
         .set_bounds(SEA_LEVEL - 0.0375, SEA_LEVEL + 1000.0375)
         .set_falloff(0.0625);
 
@@ -353,7 +375,7 @@ fn main() {
     // 5: [Continent-definition group]: Caches the output value from the
     // clamped-continent module. This is the output value for the entire
     // continent-definition group.
-    let continentDef = Cache::new(continentDef_se);
+    let continentDef = Cache::new(builder.get_ref("continentDef_se"));
 
     //    debug::render_noise_module("complexplanet_images/01_4_continentDef.png",
     //                               &continentDef,
@@ -386,18 +408,19 @@ fn main() {
     // rougher terrain from appearing exclusively at higher elevations. Rough
     // areas may now appear in the the ocean, creating rocky islands and
     // fjords.
-    let terrainTypeDef_tu = Turbulence::new(&continentDef)
+    let terrainTypeDef_tu = Turbulence::new(builder.get_ref("continentDef"))
         .set_seed(CURRENT_SEED + 20)
         .set_frequency(CONTINENT_FREQUENCY * 18.125)
         .set_power(CONTINENT_FREQUENCY / 20.59375 * TERRAIN_OFFSET)
         .set_roughness(3);
+    builder.push("terrainTypeDef_tu", Box::new(terrainTypeDef_tu));
 
     // 2: [Roughness-probability-shift module]: This terracing module sharpens
     // the edges of the warped-continent module near sea level and lowers the
     // slope towards the higher-elevation areas. This shrinks the areas in
     // which the rough terrain appears, increasing the "rarity" of rough
     // terrain.
-    let terrainTypeDef_te = Terrace::new(&terrainTypeDef_tu)
+    let terrainTypeDef_te = Terrace::new(builder.get_ref("terrainTypeDef_tu"))
         .add_control_point(-1.00)
         .add_control_point(SHELF_LEVEL + SEA_LEVEL / 2.0)
         .add_control_point(1.00);
@@ -634,9 +657,9 @@ fn main() {
     // module selects the output value from the scaled-low-mountainous-terrain
     // module.
     let mountainousTerrain_se = Select::new(
-        &mountainousTerrain_sb0,
-        &mountainousTerrain_ad,
-        &mountainBaseDef,
+        builder.get_ref("mountainousTerrain_sb0"),
+        builder.get_ref("mountainousTerrain_ad"),
+        builder.get_ref("mountainBaseDef"),
     )
     .set_bounds(-0.5, 999.5)
     .set_falloff(0.5);
@@ -898,12 +921,14 @@ fn main() {
         .set_lacunarity(BADLANDS_LACUNARITY)
         .set_octaves(6);
 
+    builder.push("badlandsCliffs_fb", Box::new(badlandsCliffs_fb));
+
     // 2: [Cliff-shaping module]: Next, this curve module applies a curve to
     // the output value from the cliff-basis module. This curve is initially
     // very shallow, but then its slope increases sharply. At the highest
     // elevations, the curve becomes very flat again. This produces the
     // stereotypical Utah-style desert cliffs.
-    let badlandsCliffs_cu = Curve::new(&badlandsCliffs_fb)
+    let badlandsCliffs_cu = Curve::new(builder.get_ref("badlandsCliffs_fb"))
         .add_control_point(-2.000, -2.000)
         .add_control_point(-1.000, -1.000)
         .add_control_point(-0.000, -0.750)
@@ -916,11 +941,12 @@ fn main() {
     // cliffs very flat by clamping the output value from the cliff-shaping
     // module.
     let badlandsCliffs_cl = Clamp::new(&badlandsCliffs_cu).set_bounds(-999.125, 0.875);
+    builder.push("badlandsCliffs_cl", Box::new(badlandsCliffs_cl));
 
     // 4: [Terraced-cliffs module]: Next, this terracing module applies some
     // terraces to the clamped-cliffs module in the lower elevations before the
     // sharp cliff transition.
-    let badlandsCliffs_te = Terrace::new(&badlandsCliffs_cl)
+    let badlandsCliffs_te = Terrace::new(builder.get_ref("badlandsCliffs_cl"))
         .add_control_point(-1.000)
         .add_control_point(-0.875)
         .add_control_point(-0.750)
@@ -1010,12 +1036,14 @@ fn main() {
         .set_lacunarity(CONTINENT_LACUNARITY)
         .set_octaves(1);
 
+    builder.push("riverPositions_rm0", Box::new(riverPositions_rm0));
+
     // 2: [Large-river-curve module]: This curve module applies a curve to the
     // output value from the large-river-basis module so that the ridges become
     // inverted. This creates the rivers. This curve also compresses the edge of
     // the rivers, producing a sharp transition from the land to the river
     // bottom.
-    let riverPositions_cu0 = Curve::new(&riverPositions_rm0)
+    let riverPositions_cu0 = Curve::new(builder.get_ref("riverPositions_rm0"))
         .add_control_point(-2.000, 2.000)
         .add_control_point(-1.000, 1.000)
         .add_control_point(-0.125, 0.875)
@@ -1031,12 +1059,14 @@ fn main() {
         .set_lacunarity(CONTINENT_LACUNARITY)
         .set_octaves(1);
 
+    builder.push("riverPositions_rm1", Box::new(riverPositions_rm1));
+
     // 4: [Small-river-curve module]: This curve module applies a curve to the
     // output value from the small-river-basis module so that the ridges become
     // inverted. This creates the rivers. This curve also compresses the edge of
     // the rivers, producing a sharp transition from the land to the river
     // bottom.
-    let riverPositions_cu1 = Curve::new(&riverPositions_rm1)
+    let riverPositions_cu1 = Curve::new(builder.get_ref("riverPositions_rm1"))
         .add_control_point(-2.000, 2.0000)
         .add_control_point(-1.000, 1.5000)
         .add_control_point(-0.125, 1.4375)
@@ -1116,7 +1146,7 @@ fn main() {
     // range of the output value from the peak-modulation module so that it can
     // be used as the modulator for the peak-height-multiplier module. It is
     // important that this output value is not much lower than 1.0.
-    let scaledMountainousTerrain_sb1 = ScaleBias::new(&scaledMountainousTerrain_ex)
+    let scaledMountainousTerrain_sb1 = ScaleBias::new(builder.get_ref("scaledMountainousTerrain_ex"))
         .set_scale(0.25)
         .set_bias(1.0);
 
@@ -1156,7 +1186,7 @@ fn main() {
     // 1: [Base-scaled-hilly-terrain module]: This scale/bias module scales the
     // output value from the hilly-terrain group so that this output value is
     // measured in planetary elevation units.
-    let scaledHillyTerrain_sb0 = ScaleBias::new(&hillyTerrain)
+    let scaledHillyTerrain_sb0 = ScaleBias::new(builder.get_ref("hillyTerrain"))
         .set_scale(0.0625)
         .set_bias(0.0625);
 
@@ -1183,7 +1213,7 @@ fn main() {
     // the range of the output value from the hilltop-modulation module so that
     // it can be used as the modulator for the hilltop-height-multiplier module.
     // It is important that this output value is not much lower than 1.0.
-    let scaledHillyTerrain_sb1 = ScaleBias::new(&scaledHillyTerrain_ex)
+    let scaledHillyTerrain_sb1 = ScaleBias::new(builder.get_ref("scaledHillyTerrain_ex"))
         .set_scale(0.5)
         .set_bias(1.5);
 
@@ -1221,7 +1251,7 @@ fn main() {
     // 1: [Scaled-plains-terrain module]: This scale/bias module greatly
     // flattens the output value from the plains terrain.  This output value
     // is measured in planetary elevation units.
-    let scaledPlainsTerrain_sb0 = ScaleBias::new(&plainsTerrain)
+    let scaledPlainsTerrain_sb0 = ScaleBias::new(builder.get_ref("plainsTerrain"))
         .set_scale(0.00390625)
         .set_bias(0.0078125);
 
@@ -1291,7 +1321,7 @@ fn main() {
     // The bottom of this terrace is defined as the bottom of the ocean;
     // subsequent noise functions will later add oceanic trenches to the bottom of
     // the ocean.
-    let continentalShelf_te = Terrace::new(&continentDef)
+    let continentalShelf_te = Terrace::new(builder.get_ref("continentDef"))
         .add_control_point(-1.0)
         .add_control_point(-0.75)
         .add_control_point(SHELF_LEVEL)
@@ -1376,7 +1406,7 @@ fn main() {
     // 1: [Base-scaled-continent-elevations module]: This scale/bias module
     // scales the output value from the continent-definition group so that it
     // is measured in planetary elevation units.
-    let baseContinentElev_sb = ScaleBias::new(&continentDef)
+    let baseContinentElev_sb = ScaleBias::new(builder.get_ref("continentDef"))
         .set_scale(CONTINENT_HEIGHT_SCALE)
         .set_bias(0.0);
 
@@ -1394,7 +1424,11 @@ fn main() {
     // continent-definition group is below the shelf level. Otherwise, it
     // selects the output value from the base-scaled-continent-elevations
     // module.
-    let baseContinentElev_se = Select::new(&baseContinentElev_sb, &continentalShelf, &continentDef)
+    let baseContinentElev_se = Select::new(
+        builder.get_ref("baseContinentElev_sb"),
+        builder.get_ref("continentalShelf"),
+        builder.get_ref("continentDef")
+    )
         .set_bounds(SHELF_LEVEL - 1000.0, SHELF_LEVEL)
         .set_falloff(0.03125);
 
@@ -1463,9 +1497,9 @@ fn main() {
     // value. Otherwise, it selects the output value from the continents-with-
     // plains subgroup.
     let continentsWithHills_se = Select::new(
-        &continentsWithPlains,
-        &continentsWithHills_ad,
-        &terrainTypeDef,
+        builder.get_ref("continentsWithPlains"),
+        builder.get_ref("continentsWithHills_ad"),
+        builder.get_ref("terrainTypeDef"),
     )
     .set_bounds(1.0 - HILLS_AMOUNT, 1001.0 - HILLS_AMOUNT)
     .set_falloff(0.25);
@@ -1508,7 +1542,7 @@ fn main() {
     // output value is used by a subsequent noise function to add additional
     // height to the mountains based on the current continent elevation. The
     // higher the continent elevation, the higher the mountains.
-    let continentsWithMountains_cu = Curve::new(&continentDef)
+    let continentsWithMountains_cu = Curve::new(builder.get_ref("continentDef"))
         .add_control_point(-1.0, -0.0625)
         .add_control_point(0.0, 0.0000)
         .add_control_point(1.0 - MOUNTAINS_AMOUNT, 0.0625)
@@ -1540,9 +1574,9 @@ fn main() {
     // continents-with-hills subgroup. Note that the continents-with-hills
     // subgroup also contains the plains terrain.
     let continentsWithMountains_se = Select::new(
-        &continentsWithHills,
-        &continentsWithMountains_ad1,
-        &terrainTypeDef,
+        builder.get_ref("continentsWithHills"),
+        builder.get_ref("continentsWithMountains_ad1"),
+        builder.get_ref("terrainTypeDef"),
     )
     .set_bounds(1.0 - MOUNTAINS_AMOUNT, 1001.0 - MOUNTAINS_AMOUNT)
     .set_falloff(0.25);
@@ -1605,9 +1639,9 @@ fn main() {
     // transition between these two noise functions so that the badlands can blend
     // into the rest of the terrain on the continents.
     let continentsWithBadlands_se = Select::new(
-        &continentsWithMountains,
-        &continentsWithBadlands_ad,
-        &continentsWithBadlands_bm,
+        builder.get_ref("continentsWithMountains"),
+        builder.get_ref("continentsWithBadlands_ad"),
+        builder.get_ref("continentsWithBadlands_bm"),
     )
     .set_bounds(1.0 - BADLANDS_AMOUNT, 1001.0 - BADLANDS_AMOUNT)
     .set_falloff(0.25);
@@ -1680,9 +1714,9 @@ fn main() {
     // this selector module selects the output value from the add-rivers-to-
     // continents module.
     let continentsWithRivers_se = Select::new(
-        &continentsWithBadlands,
-        &continentsWithRivers_ad,
-        &continentsWithBadlands,
+        builder.get_ref("continentsWithBadlands"),
+        builder.get_ref("continentsWithRivers_ad"),
+        builder.get_ref("continentsWithBadlands"),
     )
     .set_bounds(SEA_LEVEL, CONTINENT_HEIGHT_SCALE + SEA_LEVEL)
     .set_falloff(CONTINENT_HEIGHT_SCALE - SEA_LEVEL);
@@ -1738,36 +1772,70 @@ fn main() {
     //        100000,
     //    );
 
+    // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
+    //     .set_size(24, 24)
+    //     .set_x_bounds(-2.0, 2.0)
+    //     .set_y_bounds(-2.0, 2.0)
+    //     .build();
+    //
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet.png");
+    //
+    // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
+    //     .set_size(24, 24)
+    //     .set_x_bounds(-0.5, 0.5)
+    //     .set_y_bounds(-0.5, 0.5)
+    //     .build();
+    //
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet_4x_zoom.png");
+
     let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-2.0, 2.0)
-        .set_y_bounds(-2.0, 2.0)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet.png");
-
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-0.5, 0.5)
-        .set_y_bounds(-0.5, 0.5)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet_4x_zoom.png");
-
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-0.0, 0.25)
-        .set_y_bounds(-0.125, 0.125)
+        .set_size(MAP_SIZE_WIDTH, MAP_SIZE_HEIGHT)
+        .set_x_bounds(MAP_LOWER_X_BOUND, MAP_UPPER_X_BOUND)
+        .set_y_bounds(MAP_LOWER_Y_BOUND, MAP_UPPER_Y_BOUND)
         .build();
 
     ImageRenderer::new()
         .set_gradient(ColorGradient::new().build_terrain_gradient())
         .render(&noise_map)
         .write_to_file("unscaledFinalPlanet_16x_zoom.png");
+
+    println!("Complex planet complete - {} seconds elapsed", now.elapsed().as_secs());
+}
+
+struct ModuleBuilder<T, const DIM: usize> {
+    modules: Vec<Box<dyn NoiseFn<T, DIM>>>,
+    module_keys: HashMap<&'static str, usize>
+}
+
+impl<T, const DIM: usize> ModuleBuilder<T, DIM> {
+    pub fn new() -> Self {
+        ModuleBuilder {
+            modules: vec![],
+            module_keys: HashMap::new()
+        }
+    }
+
+    pub fn push(&mut self, k: &'static str, v: Box<dyn NoiseFn<T, DIM>>) {
+        self.modules.push(v);
+        self.module_keys.insert(k, self.modules.len() - 1);
+    }
+
+    pub fn get_ref(&self, k: &'static str) -> &Box<dyn NoiseFn<T, DIM>> {
+        let i = self.module_keys.get(k).unwrap();
+        &self.modules[*i]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+
+    }
 }
