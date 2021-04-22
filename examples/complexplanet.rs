@@ -272,7 +272,7 @@ fn main() {
     // 6: [Clamped-continent module]: Finally, a clamp module modifies the
     // carved continent module to ensure that the output value of this subgroup
     // is between -1.0 and 1.0.
-    let baseContinentDef_cl = arena.alloc(Clamp::new(baseContinentDef_mi).set_bounds(-1.0, 1.0));
+    let baseContinentDef_cl: &mut Clamp<f64, 3> = arena.alloc(Clamp::new(baseContinentDef_mi).set_bounds(-1.0, 1.0));
 
     // 7: [Base-continent-definition subgroup]: Caches the output value from
     // the clamped-continent module.
@@ -354,7 +354,7 @@ fn main() {
     // transition.  In effect, only the higher areas of the base-continent-
     // definition subgroup become warped; the underwater and coastal areas
     // remain unaffected.
-    let continentDef_se = arena.alloc(Select::new(&baseContinentDef, continentDef_tu2, baseContinentDef)
+    let continentDef_se: &mut Select<f64, 3> = arena.alloc(Select::new(baseContinentDef, continentDef_tu2, baseContinentDef)
         .set_bounds(SEA_LEVEL - 0.0375, SEA_LEVEL + 1000.0375)
         .set_falloff(0.0625));
 
