@@ -1,6 +1,11 @@
 extern crate noise;
 
 use noise::{utils::*, *};
+use std::time::Instant;
+use std::sync::mpsc;
+use std::thread;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 /// This example demonstrates how to use the noise-rs library to generate
 /// terrain elevations for a complex planetary surface.
@@ -60,6 +65,48 @@ use noise::{utils::*, *};
 /// code for that group and subgroup.
 #[allow(non_snake_case)]
 fn main() {
+    println!("Starting");
+    let now = Instant::now();
+
+    let maps: Vec<NoiseMap> = (0..num_cpus::get()).into_par_iter().map(|i| {
+        println!("running {}", i);
+        build_noise_map()
+    }).collect();
+
+    println!("Finished: {} seconds elapsed", now.elapsed().as_secs());
+
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet1.png");
+
+
+
+    // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
+    //     .set_size(1024, 1024)
+    //     .set_x_bounds(-0.5, 0.5)
+    //     .set_y_bounds(-0.5, 0.5)
+    //     .build();
+    //
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet_4x_zoom.png");
+    //
+    // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
+    //     .set_size(1024, 1024)
+    //     .set_x_bounds(-0.0, 0.25)
+    //     .set_y_bounds(-0.125, 0.125)
+    //     .build();
+    //
+    // ImageRenderer::new()
+    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
+    //     .render(&noise_map)
+    //     .write_to_file("unscaledFinalPlanet_16x_zoom.png");
+}
+
+#[allow(non_snake_case)]
+fn build_noise_map() -> NoiseMap {
     /// Planet seed. Change this to generate a different planet.
     const CURRENT_SEED: u32 = 0;
 
@@ -638,8 +685,8 @@ fn main() {
         &mountainousTerrain_ad,
         &mountainBaseDef,
     )
-    .set_bounds(-0.5, 999.5)
-    .set_falloff(0.5);
+        .set_bounds(-0.5, 999.5)
+        .set_falloff(0.5);
 
     // 5: [Scaled-mountainous-terrain-module]: This scale/bias module slightly
     // reduces the range of the output value from the combined-mountainous-
@@ -1467,8 +1514,8 @@ fn main() {
         &continentsWithHills_ad,
         &terrainTypeDef,
     )
-    .set_bounds(1.0 - HILLS_AMOUNT, 1001.0 - HILLS_AMOUNT)
-    .set_falloff(0.25);
+        .set_bounds(1.0 - HILLS_AMOUNT, 1001.0 - HILLS_AMOUNT)
+        .set_falloff(0.25);
 
     // 3: [Continents-with-hills subgroup]: Caches the output value from the
     // select-high-elevations module.
@@ -1544,8 +1591,8 @@ fn main() {
         &continentsWithMountains_ad1,
         &terrainTypeDef,
     )
-    .set_bounds(1.0 - MOUNTAINS_AMOUNT, 1001.0 - MOUNTAINS_AMOUNT)
-    .set_falloff(0.25);
+        .set_bounds(1.0 - MOUNTAINS_AMOUNT, 1001.0 - MOUNTAINS_AMOUNT)
+        .set_falloff(0.25);
 
     // 5: [Continents-with-mountains subgroup]: Caches the output value from the
     // select-high-elevations module.
@@ -1609,8 +1656,8 @@ fn main() {
         &continentsWithBadlands_ad,
         &continentsWithBadlands_bm,
     )
-    .set_bounds(1.0 - BADLANDS_AMOUNT, 1001.0 - BADLANDS_AMOUNT)
-    .set_falloff(0.25);
+        .set_bounds(1.0 - BADLANDS_AMOUNT, 1001.0 - BADLANDS_AMOUNT)
+        .set_falloff(0.25);
 
     //    debug::render_noise_module("complexplanet_images/23_2_continentsWithBadlands_se.png",
     //                               &continentsWithBadlands_se,
@@ -1684,8 +1731,8 @@ fn main() {
         &continentsWithRivers_ad,
         &continentsWithBadlands,
     )
-    .set_bounds(SEA_LEVEL, CONTINENT_HEIGHT_SCALE + SEA_LEVEL)
-    .set_falloff(CONTINENT_HEIGHT_SCALE - SEA_LEVEL);
+        .set_bounds(SEA_LEVEL, CONTINENT_HEIGHT_SCALE + SEA_LEVEL)
+        .set_falloff(CONTINENT_HEIGHT_SCALE - SEA_LEVEL);
 
     // 4: [Continents-with-rivers subgroup]: Caches the output value from the
     // blended-rivers-to-continents module.
@@ -1738,36 +1785,9 @@ fn main() {
     //        100000,
     //    );
 
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
+    PlaneMapBuilder::new(&unscaledFinalPlanet)
+        .set_size(200, 200)
         .set_x_bounds(-2.0, 2.0)
         .set_y_bounds(-2.0, 2.0)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet.png");
-
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-0.5, 0.5)
-        .set_y_bounds(-0.5, 0.5)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet_4x_zoom.png");
-
-    let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(1024, 1024)
-        .set_x_bounds(-0.0, 0.25)
-        .set_y_bounds(-0.125, 0.125)
-        .build();
-
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&noise_map)
-        .write_to_file("unscaledFinalPlanet_16x_zoom.png");
+        .build()
 }
