@@ -2,8 +2,6 @@ extern crate noise;
 
 use noise::{utils::*, *};
 use std::time::Instant;
-use std::sync::mpsc;
-use std::thread;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 
@@ -65,20 +63,21 @@ use rayon::iter::ParallelIterator;
 /// code for that group and subgroup.
 #[allow(non_snake_case)]
 fn main() {
-    println!("Starting");
-    let now = Instant::now();
 
-    let maps: Vec<NoiseMap> = (0..num_cpus::get()).into_par_iter().map(|i| {
-        println!("running {}", i);
-        build_noise_map()
-    }).collect();
 
-    println!("Finished: {} seconds elapsed", now.elapsed().as_secs());
+    let settings = BuilderSettings::new(
+        MapSize::new(1000, 1000),
+        AxisBounds::new(-2.0, 2.0),
+        AxisBounds::new(-2.0, 2.0)
+    );
+    let maps = par_build_noise_map(settings);
 
-    // ImageRenderer::new()
-    //     .set_gradient(ColorGradient::new().build_terrain_gradient())
-    //     .render(&noise_map)
-    //     .write_to_file("unscaledFinalPlanet1.png");
+
+
+    ImageRenderer::new()
+        .set_gradient(ColorGradient::new().build_terrain_gradient())
+        .render(&maps)
+        .write_to_file("unscaledFinalPlanet1.png");
 
 
 
@@ -105,8 +104,77 @@ fn main() {
     //     .write_to_file("unscaledFinalPlanet_16x_zoom.png");
 }
 
+fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
+    println!("Starting");
+    let now = Instant::now();
+
+    let BuilderSettings{size, x_bounds, y_bounds} = settings;
+
+    let max_threads = num_cpus::get();
+
+    let w_step = size.width / max_threads;
+    let x_step = x_bounds.get_extent() / max_threads as f64;
+    let new_size = MapSize::new(w_step, size.height);
+
+    let mut results: Vec<BuilderResult> = (0..num_cpus::get())
+        .into_par_iter()
+        .map(|i| {
+            //let current_size = MapSize::new(w_step * i, size.height);
+            let current_x_lower = x_bounds.lower + (x_step * i as f64);
+
+            let current_x_bounds = AxisBounds::new(current_x_lower, current_x_lower + x_step);
+
+            // println!("size: {:#?}", new_size);
+            // println!("x_bounds: {:#?}", current_x_bounds);
+            // println!("y_bounds: {:#?}", y_bounds);
+
+            let new_settings = BuilderSettings::new(
+                new_size,
+                current_x_bounds,
+                y_bounds
+            );
+
+            let map = build_noise_map(new_settings);
+
+            BuilderResult::new(new_settings, map)
+        })
+        .collect();
+
+    results.sort_by(|a, b| {
+        let a_lower = a.settings.x_bounds.lower;
+        let b_lower = b.settings.x_bounds.lower;
+        a_lower.partial_cmp(&b_lower).unwrap()
+    });
+
+    // maps.iter().for_each(|v| {
+    //     println!("===================================");
+    //     println!("Lower x: {}", v.settings.x_bounds.lower);
+    //     println!("Upper x: {}", v.settings.x_bounds.upper);
+    //     println!("{:#?}", v.settings);
+    // });
+
+    println!("Starting stitch together: {} seconds elapsed", now.elapsed().as_secs());
+
+    let mut result_map = NoiseMap::new(size.width, size.height);
+    let mut base_x: usize = 0;
+    for result in results {
+        for y in 0..size.height {
+            for x in 0..w_step {
+                let z = result.map.get_value(x, y);
+                result_map.set_value(base_x + x, y, z);
+            }
+        }
+        base_x = base_x + w_step;
+    }
+
+    println!("Finished stitch together: {} seconds elapsed", now.elapsed().as_secs());
+    result_map
+}
+
 #[allow(non_snake_case)]
-fn build_noise_map() -> NoiseMap {
+fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
+    let BuilderSettings{size, x_bounds, y_bounds} = settings;
+
     /// Planet seed. Change this to generate a different planet.
     const CURRENT_SEED: u32 = 0;
 
@@ -1786,8 +1854,73 @@ fn build_noise_map() -> NoiseMap {
     //    );
 
     PlaneMapBuilder::new(&unscaledFinalPlanet)
-        .set_size(200, 200)
-        .set_x_bounds(-2.0, 2.0)
-        .set_y_bounds(-2.0, 2.0)
+        .set_size(size.width, size.height)
+        .set_x_bounds(x_bounds.lower, x_bounds.upper)
+        .set_y_bounds(y_bounds.lower, y_bounds.upper)
         .build()
+}
+
+struct BuilderResult {
+    pub settings: BuilderSettings,
+    pub map: NoiseMap
+}
+
+impl BuilderResult {
+    pub fn new(settings: BuilderSettings, map: NoiseMap) -> Self {
+        Self {
+            settings,
+            map
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct BuilderSettings {
+    pub size: MapSize,
+    pub x_bounds: AxisBounds,
+    pub y_bounds: AxisBounds
+}
+
+impl BuilderSettings {
+    pub fn new(size: MapSize, x_bounds: AxisBounds, y_bounds: AxisBounds) -> Self {
+        Self {
+            size,
+            x_bounds,
+            y_bounds
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct AxisBounds {
+    pub upper: f64,
+    pub lower: f64
+}
+
+impl AxisBounds {
+    pub fn new(lower: f64, upper: f64) -> Self {
+        Self {
+            upper,
+            lower
+        }
+    }
+
+    pub fn get_extent(&self) -> f64 {
+        self.upper - self.lower
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct MapSize {
+    pub width: usize,
+    pub height: usize
+}
+
+impl MapSize {
+    pub fn new(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height
+        }
+    }
 }
