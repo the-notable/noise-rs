@@ -1,6 +1,6 @@
 pub use self::{
     checkerboard::*, constant::*, cylinders::*, fractals::*, open_simplex::*, perlin::*,
-    perlin_surflet::*, super_simplex::*, value::*, worley::*,
+    perlin_surflet::*, super_simplex::*, value::*, //worley::*,
 };
 
 mod checkerboard;
@@ -12,4 +12,4 @@ mod perlin;
 mod perlin_surflet;
 mod super_simplex;
 mod value;
-mod worley;
+//mod worley;

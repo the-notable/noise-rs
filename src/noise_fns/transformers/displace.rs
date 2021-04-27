@@ -49,6 +49,8 @@ where
     Source: NoiseFn<f64, 2>,
     XDisplace: NoiseFn<f64, 2>,
     YDisplace: NoiseFn<f64, 2>,
+    ZDisplace: Send + Sync,
+    UDisplace: Send + Sync
 {
     fn get(&self, point: [f64; 2]) -> f64 {
         // Get the output values from the displacement functions and add them to
@@ -70,6 +72,7 @@ where
     XDisplace: NoiseFn<f64, 3>,
     YDisplace: NoiseFn<f64, 3>,
     ZDisplace: NoiseFn<f64, 3>,
+    UDisplace: Send + Sync
 {
     fn get(&self, point: [f64; 3]) -> f64 {
         // Get the output values from the displacement functions and add them to
