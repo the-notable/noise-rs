@@ -1,4 +1,4 @@
-use crate::{math::interpolate, noise_fns::NoiseFn};
+use crate::{math::interpolate, noise_fns::NoiseFn, WrapRc};
 use std::rc::Rc;
 
 /// Noise function that maps the output value from the source function onto a
@@ -35,6 +35,8 @@ pub struct Terrace<T, const DIM: usize> {
     /// Vec that stores the control points.
     control_points: Vec<f64>,
 }
+
+impl<T, const DIM: usize> WrapRc for Terrace<T, DIM> {}
 
 impl<T, const DIM: usize> Terrace<T, DIM> {
     pub fn new(source: Rc<dyn NoiseFn<T, DIM>>) -> Self {

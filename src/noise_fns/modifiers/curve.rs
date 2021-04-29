@@ -1,4 +1,4 @@
-use crate::{math::interpolate, noise_fns::NoiseFn};
+use crate::{math::interpolate, noise_fns::NoiseFn, WrapRc};
 use std::rc::Rc;
 
 /// Noise function that maps the output value from the source function onto an
@@ -64,6 +64,8 @@ impl<T, const DIM: usize> Curve<T, DIM> {
         self
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Curve<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Curve<T, DIM> {
     fn get(&self, point: [T; DIM]) -> f64 {

@@ -4,6 +4,7 @@ use noise::{utils::*, *};
 use std::time::Instant;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+use std::rc::Rc;
 
 /// This example demonstrates how to use the noise-rs library to generate
 /// terrain elevations for a complex planetary surface.
@@ -66,7 +67,7 @@ fn main() {
 
 
     let settings = BuilderSettings::new(
-        MapSize::new(1000, 1000),
+        MapSize::new(500, 500),
         AxisBounds::new(-2.0, 2.0),
         AxisBounds::new(-2.0, 2.0)
     );
@@ -112,9 +113,63 @@ fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
 
     let max_threads = num_cpus::get();
 
+    //let max_threads = 1;
+
     let w_step = size.width / max_threads;
     let x_step = x_bounds.get_extent() / max_threads as f64;
     let new_size = MapSize::new(w_step, size.height);
+
+    #[allow(non_snake_case)]
+        let mtn_base_mod = || -> Box<dyn NoiseFn<_, 3>> {
+
+        const CURRENT_SEED: u32 = 0;
+        const MOUNTAIN_LACUNARITY: f64 = 2.142578125;
+        const MOUNTAINS_TWIST: f64 = 1.0;
+
+        let mountainBaseDef_rm0 = Rc::new(RidgedMulti::new()
+            .set_seed(CURRENT_SEED + 30)
+            .set_frequency(1723.0)
+            .set_lacunarity(MOUNTAIN_LACUNARITY)
+            .set_octaves(4));
+
+        // let mountainBaseDef_sb0 = ScaleBias::new(&mountainBaseDef_rm0)
+        //     .set_scale(0.5)
+        //     .set_bias(0.375);
+
+        let mountainBaseDef_rm1 = Rc::new(RidgedMulti::new()
+            .set_seed(CURRENT_SEED + 31)
+            .set_frequency(367.0)
+            .set_lacunarity(MOUNTAIN_LACUNARITY)
+            .set_octaves(1));
+
+        // let mountainBaseDef_sb1 = ScaleBias::new(&mountainBaseDef_rm1)
+        //     .set_scale(-2.0)
+        //     .set_bias(-0.5);
+
+        let mountainBaseDef_co = Rc::new(Constant::new(-1.0));
+
+        let mountainBaseDef_bl = Rc::new(Blend::new(
+            mountainBaseDef_co.clone(),
+            mountainBaseDef_rm0.clone(),
+            mountainBaseDef_rm1.clone(),
+        ));
+
+        let mountainBaseDef_tu0 = Rc::new(Turbulence::new(mountainBaseDef_bl)
+            .set_seed(CURRENT_SEED + 32)
+            .set_frequency(1337.0)
+            .set_power(1.0 / 6730.0 * MOUNTAINS_TWIST)
+            .set_roughness(4));
+
+        let mountainBaseDef_tu1 = Rc::new(Turbulence::new(mountainBaseDef_tu0)
+            .set_seed(CURRENT_SEED + 33)
+            .set_frequency(21221.0)
+            .set_power(1.0 / 120157.0 * MOUNTAINS_TWIST)
+            .set_roughness(6));
+
+        let mountainBaseDef = Cache::new(mountainBaseDef_tu1);
+
+        Box::new(mountainBaseDef)
+    };
 
     let mut results: Vec<BuilderResult> = (0..num_cpus::get())
         .into_par_iter()
@@ -134,7 +189,13 @@ fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
                 y_bounds
             );
 
-            let map = build_noise_map(new_settings);
+            // let map = build_noise_map(new_settings);
+
+            let map = PlaneMapBuilder::new(&*mtn_base_mod())
+                .set_size(size.width, size.height)
+                .set_x_bounds(x_bounds.lower, x_bounds.upper)
+                .set_y_bounds(y_bounds.lower, y_bounds.upper)
+                .build();
 
             BuilderResult::new(new_settings, map)
         })
@@ -288,7 +349,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
         .set_frequency(CONTINENT_FREQUENCY)
         .set_persistence(0.5)
         .set_lacunarity(CONTINENT_LACUNARITY)
-        .set_octaves(14);
+        .set_octaves(14)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/00_0_baseContinentDef_fb0\
     //    .png",
@@ -300,7 +362,7 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // 2: [Continent-with-ranges module]: Next, a curve module modifies the
     // output value from the continent module so that very high values appear
     // near sea level. This defines the positions of the mountain ranges.
-    let baseContinentDef_cu = Curve::new(&baseContinentDef_fb0)
+    let baseContinentDef_cu = Curve::new(baseContinentDef_fb0)
         .add_control_point(-2.0000 + SEA_LEVEL, -1.625 + SEA_LEVEL)
         .add_control_point(-1.0000 + SEA_LEVEL, -1.375 + SEA_LEVEL)
         .add_control_point(0.0000 + SEA_LEVEL, -0.375 + SEA_LEVEL)
@@ -310,7 +372,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
         .add_control_point(0.5000 + SEA_LEVEL, 0.250 + SEA_LEVEL)
         .add_control_point(0.7500 + SEA_LEVEL, 0.250 + SEA_LEVEL)
         .add_control_point(1.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL)
-        .add_control_point(2.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL);
+        .add_control_point(2.0000 + SEA_LEVEL, 0.500 + SEA_LEVEL)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/00_1_baseContinentDef_cu\
     //    .png",
@@ -328,7 +391,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
         .set_frequency(CONTINENT_FREQUENCY * 4.34375)
         .set_persistence(0.5)
         .set_lacunarity(CONTINENT_LACUNARITY)
-        .set_octaves(11);
+        .set_octaves(11)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/00_2_baseContinentDef_fb1\
     //    .png",
@@ -340,9 +404,10 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // 4: [Scaled-carver module]: This scale/bias module scales the output
     // value from the carver module such that it is usually near 1.0. This
     // is required for step 5.
-    let baseContinentDef_sb = ScaleBias::new(&baseContinentDef_fb1)
+    let baseContinentDef_sb = ScaleBias::new(baseContinentDef_fb1)
         .set_scale(0.375)
-        .set_bias(0.625);
+        .set_bias(0.625)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/00_3_baseContinentDef_sb\
     //    .png",
@@ -361,7 +426,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // the output from the scaled-carver module will be less than the output
     // value from the continent-with-ranges module, so in this case, the output
     // value from the scaled-carver module is selected.
-    let baseContinentDef_mi = Min::new(&baseContinentDef_sb, &baseContinentDef_cu);
+    let baseContinentDef_mi = Min::new(baseContinentDef_sb, baseContinentDef_cu)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/00_4_baseContinentDef_mi\
     //    .png",
@@ -373,11 +439,13 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // 6: [Clamped-continent module]: Finally, a clamp module modifies the
     // carved continent module to ensure that the output value of this subgroup
     // is between -1.0 and 1.0.
-    let baseContinentDef_cl = Clamp::new(&baseContinentDef_mi).set_bounds(-1.0, 1.0);
+    let baseContinentDef_cl = Clamp::new(baseContinentDef_mi)
+        .set_bounds(-1.0, 1.0)
+        .wrap_rc();
 
     // 7: [Base-continent-definition subgroup]: Caches the output value from
     // the clamped-continent module.
-    let baseContinentDef = Cache::new(baseContinentDef_cl);
+    let baseContinentDef = Cache::new(baseContinentDef_cl).wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/00_5_baseContinentDef.png",
     //                               &baseContinentDef,
@@ -401,11 +469,12 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // 1: [Coarse-turbulence module]: This turbulence module warps the output
     // value from the base-continent-definition subgroup, adding some coarse
     // detail to it.
-    let continentDef_tu0 = Turbulence::new(&baseContinentDef)
+    let continentDef_tu0 = Turbulence::new(baseContinentDef.clone())
         .set_seed(CURRENT_SEED + 10)
         .set_frequency(CONTINENT_FREQUENCY * 15.25)
         .set_power(CONTINENT_FREQUENCY / 113.75)
-        .set_roughness(13);
+        .set_roughness(13)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/01_0_continentDef_tu0.png",
     //                               &continentDef_tu0,
@@ -421,7 +490,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
         .set_seed(CURRENT_SEED + 11)
         .set_frequency(CONTINENT_FREQUENCY * 47.25)
         .set_power(CONTINENT_FREQUENCY / 433.75)
-        .set_roughness(12);
+        .set_roughness(12)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/01_1_continentDef_tu1.png",
     //                               &continentDef_tu1,
@@ -437,7 +507,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
         .set_seed(CURRENT_SEED + 12)
         .set_frequency(CONTINENT_FREQUENCY * 95.25)
         .set_power(CONTINENT_FREQUENCY / 1019.75)
-        .set_roughness(11);
+        .set_roughness(11)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/01_2_continentDef_tu2.png",
     //                               &continentDef_tu2,
@@ -455,9 +526,14 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // transition.  In effect, only the higher areas of the base-continent-
     // definition subgroup become warped; the underwater and coastal areas
     // remain unaffected.
-    let continentDef_se = Select::new(&baseContinentDef, &continentDef_tu2, &baseContinentDef)
+    let continentDef_se = Select::new(
+        baseContinentDef.clone(),
+        continentDef_tu2,
+        baseContinentDef
+    )
         .set_bounds(SEA_LEVEL - 0.0375, SEA_LEVEL + 1000.0375)
-        .set_falloff(0.0625);
+        .set_falloff(0.0625)
+        .wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/01_3_continentDef_se.png",
     //                               &continentDef_se,
@@ -468,7 +544,7 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // 5: [Continent-definition group]: Caches the output value from the
     // clamped-continent module. This is the output value for the entire
     // continent-definition group.
-    let continentDef = Cache::new(continentDef_se);
+    let continentDef = Cache::new(continentDef_se).wrap_rc();
 
     //    debug::render_noise_module("complexplanet_images/01_4_continentDef.png",
     //                               &continentDef,
@@ -501,26 +577,28 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
     // rougher terrain from appearing exclusively at higher elevations. Rough
     // areas may now appear in the the ocean, creating rocky islands and
     // fjords.
-    let terrainTypeDef_tu = Turbulence::new(&continentDef)
+    let terrainTypeDef_tu = Turbulence::new(continentDef)
         .set_seed(CURRENT_SEED + 20)
         .set_frequency(CONTINENT_FREQUENCY * 18.125)
         .set_power(CONTINENT_FREQUENCY / 20.59375 * TERRAIN_OFFSET)
-        .set_roughness(3);
+        .set_roughness(3)
+        .wrap_rc();
 
     // 2: [Roughness-probability-shift module]: This terracing module sharpens
     // the edges of the warped-continent module near sea level and lowers the
     // slope towards the higher-elevation areas. This shrinks the areas in
     // which the rough terrain appears, increasing the "rarity" of rough
     // terrain.
-    let terrainTypeDef_te = Terrace::new(&terrainTypeDef_tu)
+    let terrainTypeDef_te = Terrace::new(terrainTypeDef_tu)
         .add_control_point(-1.00)
         .add_control_point(SHELF_LEVEL + SEA_LEVEL / 2.0)
-        .add_control_point(1.00);
+        .add_control_point(1.00)
+        .wrap_rc();
 
     // 3: [Terrain-type-definition group]: Caches the output value from the
     // roughness-probability-shift module. This is the output value for the
     // entire terrain-type-definition group.
-    let terrainTypeDef = Cache::new(terrainTypeDef_te);
+    let terrainTypeDef = Cache::new(terrainTypeDef_te).wrap_rc();
 
     // /////////////////////////////////////////////////////////////////////////
     // Function group: mountainous terrain
@@ -542,7 +620,8 @@ fn build_noise_map(settings: BuilderSettings) -> NoiseMap {
         .set_seed(CURRENT_SEED + 30)
         .set_frequency(1723.0)
         .set_lacunarity(MOUNTAIN_LACUNARITY)
-        .set_octaves(4);
+        .set_octaves(4)
+        .wrap_rc();
 
     // 2: [Scaled-mountain-ridge module]: Next, a scale/bias module scales the
     // output value from the mountain-ridge module so that its ridges are not

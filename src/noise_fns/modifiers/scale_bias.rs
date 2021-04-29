@@ -1,5 +1,6 @@
 use crate::noise_fns::NoiseFn;
 use std::rc::Rc;
+use crate::WrapRc;
 
 /// Noise function that applies a scaling factor and a bias to the output value
 /// from the source function.
@@ -36,6 +37,8 @@ impl<T, const DIM: usize> ScaleBias<T, DIM> {
         Self { bias, ..self }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for ScaleBias<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for ScaleBias<T, DIM> {
     #[cfg(not(target_os = "emscripten"))]

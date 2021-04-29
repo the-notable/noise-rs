@@ -1,6 +1,7 @@
 pub use self::{
     cache::*, combiners::*, generators::*, modifiers::*, selectors::*, transformers::*,
 };
+use std::rc::Rc;
 
 mod cache;
 mod combiners;
@@ -22,11 +23,11 @@ mod transformers;
 /// * Mathematically changing the output value from another noise function
 ///     in various ways.
 /// * Combining the output values from two noise functions in various ways.
-pub trait NoiseFn<T, const DIM: usize> {
+pub trait NoiseFn<T, const DIM: usize>: WrapRc {
     fn get(&self, point: [T; DIM]) -> f64;
 }
 
-impl<'a, T, M: NoiseFn<T, DIM>, const DIM: usize> NoiseFn<T, DIM> for &'a M {
+impl<'a, T, M: NoiseFn<T, DIM> , const DIM: usize> NoiseFn<T, DIM> for &'a M {
     #[inline]
     fn get(&self, point: [T; DIM]) -> f64 {
         M::get(*self, point)
@@ -40,4 +41,12 @@ pub trait Seedable {
 
     /// Getter to retrieve the seed from the function
     fn seed(&self) -> u32;
+}
+
+pub trait WrapRc {
+    fn wrap_rc(self) -> Rc<Self> { Rc::new(self) }
+}
+
+impl<T, M: NoiseFn<T, DIM>, const DIM: usize> WrapRc for &M {
+    fn wrap_rc(self) -> Rc<Self> { Rc::new(self) }
 }

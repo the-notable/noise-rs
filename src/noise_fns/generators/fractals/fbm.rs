@@ -1,6 +1,7 @@
-use crate::math;
+use crate::{math, WrapRc};
 
 use crate::noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable};
+use std::rc::Rc;
 
 /// Noise function that outputs fBm (fractal Brownian motion) noise.
 ///
@@ -83,6 +84,8 @@ impl Default for Fbm {
         Self::new()
     }
 }
+
+impl WrapRc for Fbm {}
 
 impl MultiFractal for Fbm {
     fn set_octaves(self, mut octaves: usize) -> Self {
