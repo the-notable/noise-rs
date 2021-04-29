@@ -1,7 +1,4 @@
-use crate::{
-    math::{self, scale_shift},
-    noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable},
-};
+use crate::{math::{self, scale_shift}, noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable}, WrapRc};
 
 /// Noise function that outputs ridged-multifractal noise.
 ///
@@ -141,6 +138,8 @@ impl Seedable for RidgedMulti {
         self.seed
     }
 }
+
+
 
 /// 2-dimensional `RidgedMulti` noise
 impl NoiseFn<f64, 2> for RidgedMulti {

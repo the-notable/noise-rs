@@ -1,50 +1,41 @@
-use crate::{
-    math::{interpolate, s_curve::cubic::Cubic},
-    noise_fns::NoiseFn,
-};
+use crate::{math::{interpolate, s_curve::cubic::Cubic}, noise_fns::NoiseFn, WrapRc};
 use std::rc::Rc;
 use std::marker::PhantomData;
 
 /// Noise function that outputs the value selected from one of two source
 /// functions chosen by the output value from a control function.
-pub struct Select<T, N, const DIM: usize>
-where
-    T: NoiseFn<N, DIM>
-{
+pub struct Select<T, const DIM: usize> {
     /// Outputs a value.
-    pub source1: Rc<T>,
+    pub source1: Rc<dyn NoiseFn<T, DIM>>,
 
     /// Outputs a value.
-    pub source2: Rc<T>,
+    pub source2: Rc<dyn NoiseFn<T, DIM>>,
 
     /// Determines the value to select. If the output value from
     /// the control function is within a range of values know as the _selection
     /// range_, this noise function outputs the value from `source2`.
     /// Otherwise, this noise function outputs the value from `source1`.
-    pub control: Rc<T>,
+    pub control: Rc<dyn NoiseFn<T, DIM>>,
 
     /// Bounds of the selection range. Default is 0.0 to 1.0.
     pub bounds: (f64, f64),
 
     /// Edge falloff value. Default is 0.0.
-    pub falloff: f64,
-
-    _marker: PhantomData<N>
+    pub falloff: f64
 }
 
-impl<T: NoiseFn<N, DIM>, N, const DIM: usize> Select<T, N, DIM> {
+impl<T, const DIM: usize> Select<T, DIM> {
     pub fn new(
-        source1: Rc<T>,
-        source2: Rc<T>,
-        control: Rc<T>,
+        source1: Rc<dyn NoiseFn<T, DIM>>,
+        source2: Rc<dyn NoiseFn<T, DIM>>,
+        control: Rc<dyn NoiseFn<T, DIM>>,
     ) -> Self {
         Select {
             source1,
             source2,
             control,
             bounds: (0.0, 1.0),
-            falloff: 0.0,
-            _marker: PhantomData
+            falloff: 0.0
         }
     }
 
@@ -60,7 +51,9 @@ impl<T: NoiseFn<N, DIM>, N, const DIM: usize> Select<T, N, DIM> {
     }
 }
 
-impl<T: NoiseFn<R, DIM>, R, const DIM: usize> NoiseFn<R, DIM> for Select<T, R, DIM>
+impl<T, const DIM: usize> WrapRc for Select<T, DIM> {}
+
+impl<T, const DIM: usize> NoiseFn<T, DIM> for Select<T, DIM>
 where
     R: Copy,
 {

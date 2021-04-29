@@ -1,5 +1,6 @@
 use crate::noise_fns::{Fbm, MultiFractal, NoiseFn, Seedable};
 use std::rc::Rc;
+use crate::WrapRc;
 
 /// Noise function that randomly displaces the input value before returning the
 /// output value from the source function.
@@ -106,6 +107,8 @@ impl<Source> Seedable for Turbulence<Source> {
         self.seed
     }
 }
+
+impl<Source> WrapRc for Turbulence<Source> {}
 
 impl<Source> NoiseFn<f64, 2> for Turbulence<Source>
 where

@@ -1,4 +1,4 @@
-use crate::{math::interpolate, noise_fns::NoiseFn};
+use crate::{math::interpolate, noise_fns::NoiseFn, WrapRc};
 use std::rc::Rc;
 
 /// Noise function that outputs a weighted blend of the output values from two
@@ -33,6 +33,8 @@ impl<T, const DIM: usize> Blend<T, DIM> {
         }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Blend<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Blend<T, DIM>
 where
