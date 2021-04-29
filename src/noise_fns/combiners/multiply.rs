@@ -1,22 +1,23 @@
 use crate::noise_fns::NoiseFn;
+use std::rc::Rc;
 
 /// Noise function that outputs the product of the two output values from two source
 /// functions.
-pub struct Multiply<'a, T, const DIM: usize> {
+pub struct Multiply<T, const DIM: usize> {
     /// Outputs a value.
-    pub source1: &'a dyn NoiseFn<T, DIM>,
+    pub source1: Rc<dyn NoiseFn<T, DIM>>,
 
     /// Outputs a value.
-    pub source2: &'a dyn NoiseFn<T, DIM>,
+    pub source2: Rc<dyn NoiseFn<T, DIM>>,
 }
 
-impl<'a, T, const DIM: usize> Multiply<'a, T, DIM> {
-    pub fn new(source1: &'a dyn NoiseFn<T, DIM>, source2: &'a dyn NoiseFn<T, DIM>) -> Self {
+impl<T, const DIM: usize> Multiply<T, DIM> {
+    pub fn new(source1: Rc<dyn NoiseFn<T, DIM>>, source2: Rc<dyn NoiseFn<T, DIM>>) -> Self {
         Self { source1, source2 }
     }
 }
 
-impl<'a, T, const DIM: usize> NoiseFn<T, DIM> for Multiply<'a, T, DIM>
+impl<T, const DIM: usize> NoiseFn<T, DIM> for Multiply<T, DIM>
 where
     T: Copy,
 {

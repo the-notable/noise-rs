@@ -1,22 +1,23 @@
 use crate::noise_fns::NoiseFn;
+use std::rc::Rc;
 
 /// Noise function that raises the output value from the first source function
 /// to the power of the output value of the second source function.
-pub struct Power<'a, T, const DIM: usize> {
+pub struct Power<T, const DIM: usize> {
     /// Outputs a value.
-    pub source1: &'a dyn NoiseFn<T, DIM>,
+    pub source1: Rc<dyn NoiseFn<T, DIM>>,
 
     /// Outputs a value.
-    pub source2: &'a dyn NoiseFn<T, DIM>,
+    pub source2: Rc<dyn NoiseFn<T, DIM>>,
 }
 
-impl<'a, T, const DIM: usize> Power<'a, T, DIM> {
-    pub fn new(source1: &'a dyn NoiseFn<T, DIM>, source2: &'a dyn NoiseFn<T, DIM>) -> Self {
+impl<T, const DIM: usize> Power<T, DIM> {
+    pub fn new(source1: Rc<dyn NoiseFn<T, DIM>>, source2: Rc<dyn NoiseFn<T, DIM>>) -> Self {
         Self { source1, source2 }
     }
 }
 
-impl<'a, T, const DIM: usize> NoiseFn<T, DIM> for Power<'a, T, DIM>
+impl<T, const DIM: usize> NoiseFn<T, DIM> for Power<T, DIM>
 where
     T: Copy,
 {
