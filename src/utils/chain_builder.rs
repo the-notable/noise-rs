@@ -8,18 +8,15 @@ impl ChainBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Blend, Seedable, MultiFractal, Constant, NoiseFn, Turbulence};
-    use crate::fractals::RidgedMulti;
+    use crate::{Blend, Seedable, MultiFractal, Constant, NoiseFn, Turbulence, RidgedMulti, Cache};
     use std::rc::Rc;
-    use crate::noise_fns::cache;
-    use crate::noise_fns::cache::Cache;
     use crate::utils::{PlaneMapBuilder, ImageRenderer, NoiseMapBuilder, ColorGradient};
 
     #[test]
     fn chain_builder_test() {
 
         #[allow(non_snake_case)]
-            let mtn_base_mod = || -> Rc<dyn NoiseFn<_, 3>> {
+            let mtn_base_mod = || -> Box<dyn NoiseFn<_, 3>> {
 
             const CURRENT_SEED: u32 = 0;
             const MOUNTAIN_LACUNARITY: f64 = 2.142578125;
@@ -67,7 +64,7 @@ mod tests {
 
             let mountainBaseDef = Cache::new(mountainBaseDef_tu1);
 
-            Rc::new(mountainBaseDef)
+            Box::new(mountainBaseDef)
         };
 
         let noise_map = PlaneMapBuilder::new(&*mtn_base_mod())

@@ -1,14 +1,13 @@
 pub use self::{
-    combiners::*, generators::*, modifiers::*, selectors::*, transformers::*,
+    cache::*, combiners::*, generators::*, modifiers::*, selectors::*, transformers::*,
 };
 
-//mod cache;
+mod cache;
 mod combiners;
 mod generators;
 mod modifiers;
 mod selectors;
 mod transformers;
-pub(crate) mod cache;
 
 /// Base trait for noise functions.
 ///
