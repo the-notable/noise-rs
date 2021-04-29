@@ -1,4 +1,5 @@
 use crate::noise_fns::{Fbm, MultiFractal, NoiseFn, Seedable};
+use std::rc::Rc;
 
 /// Noise function that randomly displaces the input value before returning the
 /// output value from the source function.
@@ -11,7 +12,7 @@ use crate::noise_fns::{Fbm, MultiFractal, NoiseFn, Seedable};
 #[derive(Clone, Debug)]
 pub struct Turbulence<Source> {
     /// Source function that outputs a value.
-    pub source: Source,
+    pub source: Rc<Source>,
 
     /// Frequency value for the Turbulence function.
     pub frequency: f64,
@@ -36,7 +37,7 @@ impl<Source> Turbulence<Source> {
     pub const DEFAULT_POWER: f64 = 1.0;
     pub const DEFAULT_ROUGHNESS: usize = 3;
 
-    pub fn new(source: Source) -> Self {
+    pub fn new(source: Rc<Source>) -> Self {
         Self {
             source,
             seed: Self::DEFAULT_SEED,

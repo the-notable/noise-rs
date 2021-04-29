@@ -44,23 +44,23 @@ mod tests {
 
             let mountainBaseDef_co = Rc::new(Constant::new(-1.0));
 
-            let mountainBaseDef_bl = Blend::new(
+            let mountainBaseDef_bl = Rc::new(Blend::new(
                 mountainBaseDef_co.clone(),
                 mountainBaseDef_rm0.clone(),
                 mountainBaseDef_rm1.clone(),
-            );
+            ));
 
-            let mountainBaseDef_tu0 = Turbulence::new(mountainBaseDef_bl)
+            let mountainBaseDef_tu0 = Rc::new(Turbulence::new(mountainBaseDef_bl)
                 .set_seed(CURRENT_SEED + 32)
                 .set_frequency(1337.0)
                 .set_power(1.0 / 6730.0 * MOUNTAINS_TWIST)
-                .set_roughness(4);
+                .set_roughness(4));
 
-            let mountainBaseDef_tu1 = Turbulence::new(mountainBaseDef_tu0)
+            let mountainBaseDef_tu1 = Rc::new(Turbulence::new(mountainBaseDef_tu0)
                 .set_seed(CURRENT_SEED + 33)
                 .set_frequency(21221.0)
                 .set_power(1.0 / 120157.0 * MOUNTAINS_TWIST)
-                .set_roughness(6);
+                .set_roughness(6));
 
             let mountainBaseDef = Cache::new(mountainBaseDef_tu1);
 
