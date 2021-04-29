@@ -2,34 +2,41 @@ use crate::{
     math::{interpolate, s_curve::cubic::Cubic},
     noise_fns::NoiseFn,
 };
+use std::rc::Rc;
+use std::marker::PhantomData;
 
 /// Noise function that outputs the value selected from one of two source
 /// functions chosen by the output value from a control function.
-pub struct Select<'a, T, const DIM: usize> {
+pub struct Select<T, N, const DIM: usize>
+where
+    T: NoiseFn<N, DIM>
+{
     /// Outputs a value.
-    pub source1: &'a dyn NoiseFn<T, DIM>,
+    pub source1: Rc<T>,
 
     /// Outputs a value.
-    pub source2: &'a dyn NoiseFn<T, DIM>,
+    pub source2: Rc<T>,
 
     /// Determines the value to select. If the output value from
     /// the control function is within a range of values know as the _selection
     /// range_, this noise function outputs the value from `source2`.
     /// Otherwise, this noise function outputs the value from `source1`.
-    pub control: &'a dyn NoiseFn<T, DIM>,
+    pub control: Rc<T>,
 
     /// Bounds of the selection range. Default is 0.0 to 1.0.
     pub bounds: (f64, f64),
 
     /// Edge falloff value. Default is 0.0.
     pub falloff: f64,
+
+    _marker: PhantomData<N>
 }
 
-impl<'a, T, const DIM: usize> Select<'a, T, DIM> {
+impl<T: NoiseFn<N, DIM>, N, const DIM: usize> Select<T, N, DIM> {
     pub fn new(
-        source1: &'a dyn NoiseFn<T, DIM>,
-        source2: &'a dyn NoiseFn<T, DIM>,
-        control: &'a dyn NoiseFn<T, DIM>,
+        source1: Rc<T>,
+        source2: Rc<T>,
+        control: Rc<T>,
     ) -> Self {
         Select {
             source1,
@@ -37,6 +44,7 @@ impl<'a, T, const DIM: usize> Select<'a, T, DIM> {
             control,
             bounds: (0.0, 1.0),
             falloff: 0.0,
+            _marker: PhantomData
         }
     }
 
@@ -52,11 +60,11 @@ impl<'a, T, const DIM: usize> Select<'a, T, DIM> {
     }
 }
 
-impl<'a, T, const DIM: usize> NoiseFn<T, DIM> for Select<'a, T, DIM>
+impl<T: NoiseFn<R, DIM>, R, const DIM: usize> NoiseFn<R, DIM> for Select<T, R, DIM>
 where
-    T: Copy,
+    R: Copy,
 {
-    fn get(&self, point: [T; DIM]) -> f64 {
+    fn get(&self, point: [R; DIM]) -> f64 {
         let control_value = self.control.get(point);
         let (lower, upper) = self.bounds;
 

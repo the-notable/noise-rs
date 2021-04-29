@@ -8,3 +8,4 @@ mod image_renderer;
 mod noise_image;
 mod noise_map;
 mod noise_map_builder;
+mod chain_builder;

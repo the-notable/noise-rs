@@ -8,6 +8,7 @@ mod generators;
 mod modifiers;
 mod selectors;
 mod transformers;
+pub(crate) mod cache;
 
 /// Base trait for noise functions.
 ///
@@ -22,7 +23,7 @@ mod transformers;
 /// * Mathematically changing the output value from another noise function
 ///     in various ways.
 /// * Combining the output values from two noise functions in various ways.
-pub trait NoiseFn<T, const DIM: usize>: Send + Sync {
+pub trait NoiseFn<T, const DIM: usize> {
     fn get(&self, point: [T; DIM]) -> f64;
 }
 
