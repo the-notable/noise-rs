@@ -23,8 +23,9 @@ mod transformers;
 /// * Mathematically changing the output value from another noise function
 ///     in various ways.
 /// * Combining the output values from two noise functions in various ways.
-pub trait NoiseFn<T, const DIM: usize>: WrapRc {
+pub trait NoiseFn<T, const DIM: usize> {
     fn get(&self, point: [T; DIM]) -> f64;
+    //fn wrap_rc(self) -> Rc<Self<T, DIM>>;
 }
 
 impl<'a, T, M: NoiseFn<T, DIM> , const DIM: usize> NoiseFn<T, DIM> for &'a M {
@@ -32,6 +33,8 @@ impl<'a, T, M: NoiseFn<T, DIM> , const DIM: usize> NoiseFn<T, DIM> for &'a M {
     fn get(&self, point: [T; DIM]) -> f64 {
         M::get(*self, point)
     }
+
+    //fn wrap_rc(self) -> Rc<Self> { Rc::new(self) }
 }
 
 /// Trait for functions that require a seed before generating their values
@@ -47,6 +50,11 @@ pub trait WrapRc {
     fn wrap_rc(self) -> Rc<Self> { Rc::new(self) }
 }
 
-impl<T, M: NoiseFn<T, DIM>, const DIM: usize> WrapRc for &M {
+impl<T, M: NoiseFn<T, DIM>, const DIM: usize> WrapRc for M {
     fn wrap_rc(self) -> Rc<Self> { Rc::new(self) }
 }
+
+//
+// impl<T, M: NoiseFn<T, DIM>, const DIM: usize> WrapRc for &M {
+//     fn wrap_rc(self) -> Rc<Self> { Rc::new(self) }
+// }

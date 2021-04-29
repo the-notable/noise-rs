@@ -1,6 +1,5 @@
 use crate::{math::{interpolate, s_curve::cubic::Cubic}, noise_fns::NoiseFn, WrapRc};
 use std::rc::Rc;
-use std::marker::PhantomData;
 
 /// Noise function that outputs the value selected from one of two source
 /// functions chosen by the output value from a control function.
@@ -55,9 +54,9 @@ impl<T, const DIM: usize> WrapRc for Select<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Select<T, DIM>
 where
-    R: Copy,
+    T: Copy,
 {
-    fn get(&self, point: [R; DIM]) -> f64 {
+    fn get(&self, point: [T; DIM]) -> f64 {
         let control_value = self.control.get(point);
         let (lower, upper) = self.bounds;
 

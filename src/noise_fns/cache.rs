@@ -36,8 +36,6 @@ impl<Source> Cache<Source> {
     }
 }
 
-impl<Source, const DIM: usize> WrapRc for Cache<Source> {}
-
 impl<Source, const DIM: usize> NoiseFn<f64, DIM> for Cache<Source>
 where
     Source: NoiseFn<f64, DIM>,

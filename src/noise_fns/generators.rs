@@ -3,8 +3,6 @@ pub use self::{
     perlin_surflet::*, super_simplex::*, value::*, //worley::*,
 };
 
-pub use self::{perlin::*, fractals::*, constant::*};
-
 mod checkerboard;
 mod constant;
 mod cylinders;
