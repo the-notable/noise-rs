@@ -66,9 +66,9 @@ fn main() {
 
 
     let settings = BuilderSettings::new(
-        MapSize::new(100, 100),
-        AxisBounds::new(-2.0, 2.0),
-        AxisBounds::new(-2.0, 2.0)
+        MapSize::new(250, 250),
+        AxisBounds::new(-0.5, 0.5),
+        AxisBounds::new(-0.5, 0.5)
     );
     let maps = par_build_noise_map(settings);
 
@@ -1848,11 +1848,11 @@ fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
                 y_bounds
             );
 
-            // let map = build_noise_map(new_settings);
+            //let map = build_noise_map(new_settings);
 
             let map = PlaneMapBuilder::new(&*mtn_base_mod())
-                .set_size(size.width, size.height)
-                .set_x_bounds(x_bounds.lower, x_bounds.upper)
+                .set_size(new_size.width, new_size.height)
+                .set_x_bounds(current_x_bounds.lower, current_x_bounds.upper)
                 .set_y_bounds(y_bounds.lower, y_bounds.upper)
                 .build();
 
@@ -1877,12 +1877,18 @@ fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
 
     let mut result_map = NoiseMap::new(size.width, size.height);
     let mut base_x: usize = 0;
+
+    //assert_eq!(results[0].map, results[1].map);
+
     for result in results {
 
         // println!("size: {:#?}", new_size);
         // println!("x_bounds: {:#?}", current_x_bounds);
         // println!("y_bounds: {:#?}", y_bounds);
         println!("=============================================================");
+        println!("Base x: {}", base_x);
+        let (map_size_x, map_size_y) = result.map.size();
+        println!("Size: {} X {}", map_size_x, map_size_y);
         println!("{:#?}", result.settings.x_bounds);
 
         for y in 0..size.height {
