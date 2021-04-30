@@ -64,22 +64,17 @@ use rayon::iter::ParallelIterator;
 #[allow(non_snake_case)]
 fn main() {
 
-
     let settings = BuilderSettings::new(
-        MapSize::new(250, 250),
+        MapSize::new(100, 100),
         AxisBounds::new(-0.5, 0.5),
         AxisBounds::new(-0.5, 0.5)
     );
     let maps = par_build_noise_map(settings);
 
-
-
     ImageRenderer::new()
         .set_gradient(ColorGradient::new().build_terrain_gradient())
         .render(&maps)
         .write_to_file("unscaledFinalPlanet1.png");
-
-
 
     // let noise_map = PlaneMapBuilder::new(&unscaledFinalPlanet)
     //     .set_size(1024, 1024)
@@ -104,6 +99,23 @@ fn main() {
     //     .write_to_file("unscaledFinalPlanet_16x_zoom.png");
 }
 
+fn number_to_whole_parts(v: usize, n: usize) -> Vec<usize> {
+    if v % n == 0 {
+        let base = v/n;
+        return (0..n).into_iter().map(|_| base).collect();
+    }
+
+    let base: usize = ((v / n) as f64).floor() as usize;
+    let rem = v - (base * n);
+    (0..n).into_iter().map(|i| {
+        if i <= rem {
+            base + 1
+        } else {
+            base
+        }
+    }).collect()
+}
+
 fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
     println!("Starting");
     let now = Instant::now();
@@ -116,8 +128,15 @@ fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
     let x_step = x_bounds.get_extent() / max_threads as f64;
     let new_size = MapSize::new(w_step, size.height);
 
+    println!("width: {}", size.width);
+    println!("w step: {}", w_step);
+
+    for (i, v) in number_to_whole_parts(size.width, max_threads).iter().enumerate() {
+        println!("{}: {}", i, v);
+    }
+
     #[allow(non_snake_case)]
-    let mtn_base_mod = || -> Box<dyn NoiseFn<_, 3>> {
+    let world_mod = || -> Box<dyn NoiseFn<_, 3>> {
         /// Planet seed. Change this to generate a different planet.
         const CURRENT_SEED: u32 = 0;
 
@@ -1841,7 +1860,7 @@ fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
                 y_bounds
             );
 
-            let map = PlaneMapBuilder::new(&*mtn_base_mod())
+            let map = PlaneMapBuilder::new(&*world_mod())
                 .set_size(new_size.width, new_size.height)
                 .set_x_bounds(current_x_bounds.lower, current_x_bounds.upper)
                 .set_y_bounds(y_bounds.lower, y_bounds.upper)
