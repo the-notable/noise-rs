@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that uses multiple source functions to displace each coordinate
 /// of the input value before returning the output value from the `source` function.
@@ -42,6 +43,9 @@ impl<Source, XDisplace, YDisplace, ZDisplace, UDisplace>
         }
     }
 }
+
+impl<Source, XDisplace, YDisplace, ZDisplace, UDisplace> WrapRc
+for Displace<Source, XDisplace, YDisplace, ZDisplace, UDisplace> {}
 
 impl<Source, XDisplace, YDisplace, ZDisplace, UDisplace> NoiseFn<f64, 2>
     for Displace<Source, XDisplace, YDisplace, ZDisplace, UDisplace>

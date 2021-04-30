@@ -1,8 +1,4 @@
-use crate::{
-    gradient, math,
-    noise_fns::{NoiseFn, Seedable},
-    permutationtable::{NoiseHasher, PermutationTable},
-};
+use crate::{gradient, math, noise_fns::{NoiseFn, Seedable}, permutationtable::{NoiseHasher, PermutationTable}, WrapRc};
 use std::ops::Add;
 
 const TO_REAL_CONSTANT_2D: f64 = -0.211_324_865_405_187; // (1 / sqrt(2 + 1) - 1) / 2
@@ -131,6 +127,8 @@ impl Seedable for SuperSimplex {
         self.seed
     }
 }
+
+impl WrapRc for SuperSimplex {}
 
 /// 2-dimensional Super Simplex noise
 impl NoiseFn<f64, 2> for SuperSimplex {

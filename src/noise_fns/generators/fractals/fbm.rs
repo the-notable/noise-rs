@@ -1,7 +1,6 @@
 use crate::{math, WrapRc};
 
 use crate::noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable};
-use std::rc::Rc;
 
 /// Noise function that outputs fBm (fractal Brownian motion) noise.
 ///

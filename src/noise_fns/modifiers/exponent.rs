@@ -1,4 +1,4 @@
-use crate::{math::scale_shift, noise_fns::NoiseFn};
+use crate::{math::scale_shift, noise_fns::NoiseFn, WrapRc};
 use std::rc::Rc;
 
 /// Noise function that maps the output value from the source function onto an
@@ -29,6 +29,8 @@ impl<T, const DIM: usize> Exponent<T, DIM> {
         Self { exponent, ..self }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Exponent<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Exponent<T, DIM> {
     fn get(&self, point: [T; DIM]) -> f64 {

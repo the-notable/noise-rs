@@ -1,5 +1,6 @@
 use crate::noise_fns::NoiseFn;
 use std::rc::Rc;
+use crate::WrapRc;
 
 /// Noise function that outputs the absolute value of the output value from the
 /// source function.
@@ -13,6 +14,8 @@ impl<T, const DIM: usize> Abs<T, DIM> {
         Self { source }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Abs<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Abs<T, DIM> {
     fn get(&self, point: [T; DIM]) -> f64 {

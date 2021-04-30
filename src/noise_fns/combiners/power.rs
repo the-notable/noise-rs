@@ -1,5 +1,6 @@
 use crate::noise_fns::NoiseFn;
 use std::rc::Rc;
+use crate::WrapRc;
 
 /// Noise function that raises the output value from the first source function
 /// to the power of the output value of the second source function.
@@ -16,6 +17,8 @@ impl<T, const DIM: usize> Power<T, DIM> {
         Self { source1, source2 }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Power<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Power<T, DIM>
 where

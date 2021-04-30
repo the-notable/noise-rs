@@ -1,7 +1,4 @@
-use crate::{
-    math::{self, scale_shift},
-    noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable},
-};
+use crate::{math::{self, scale_shift}, noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable}, WrapRc};
 
 /// Noise function that outputs "billowy" noise.
 ///
@@ -125,6 +122,8 @@ impl Seedable for Billow {
         self.seed
     }
 }
+
+impl WrapRc for Billow {}
 
 /// 2-dimensional Billow noise
 impl NoiseFn<f64, 2> for Billow {

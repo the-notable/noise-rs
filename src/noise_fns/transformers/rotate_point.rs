@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that rotates the input value around the origin before
 /// returning the output value from the source function.
@@ -76,6 +77,8 @@ impl<Source> RotatePoint<Source> {
         }
     }
 }
+
+impl<Source> WrapRc for RotatePoint<Source> {}
 
 impl<Source> NoiseFn<f64, 2> for RotatePoint<Source>
 where

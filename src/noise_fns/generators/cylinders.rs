@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that outputs concentric cylinders.
 ///
@@ -30,6 +31,8 @@ impl Default for Cylinders {
         Self::new()
     }
 }
+
+impl WrapRc for Cylinders {}
 
 impl<const N: usize> NoiseFn<f64, N> for Cylinders {
     fn get(&self, point: [f64; N]) -> f64 {

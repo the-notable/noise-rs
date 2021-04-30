@@ -1,8 +1,4 @@
-use crate::{
-    math::{self, s_curve::quintic::Quintic},
-    noise_fns::{NoiseFn, Seedable},
-    permutationtable::{NoiseHasher, PermutationTable},
-};
+use crate::{math::{self, s_curve::quintic::Quintic}, noise_fns::{NoiseFn, Seedable}, permutationtable::{NoiseHasher, PermutationTable}, WrapRc};
 
 /// Noise function that outputs 2/3/4-dimensional Perlin noise.
 #[derive(Clone, Copy, Debug)]
@@ -47,6 +43,8 @@ impl Seedable for Perlin {
         self.seed
     }
 }
+
+impl WrapRc for Perlin {}
 
 /// 2-dimensional perlin noise
 impl NoiseFn<f64, 2> for Perlin {

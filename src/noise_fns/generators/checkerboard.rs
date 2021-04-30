@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that outputs a checkerboard pattern.
 ///
@@ -38,6 +39,8 @@ impl Default for Checkerboard {
         }
     }
 }
+
+impl WrapRc for Checkerboard {}
 
 impl<const N: usize> NoiseFn<f64, N> for Checkerboard {
     fn get(&self, point: [f64; N]) -> f64 {

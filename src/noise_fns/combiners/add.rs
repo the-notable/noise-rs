@@ -1,5 +1,6 @@
 use crate::noise_fns::NoiseFn;
 use std::rc::Rc;
+use crate::WrapRc;
 
 /// Noise function that outputs the sum of the two output values from two source
 /// functions.
@@ -16,6 +17,8 @@ impl<T, const DIM: usize> Add<T, DIM> {
         Self { source1, source2 }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Add<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Add<T, DIM>
 where

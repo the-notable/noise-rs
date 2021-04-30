@@ -1,8 +1,4 @@
-use crate::{
-    math,
-    noise_fns::{NoiseFn, Seedable},
-    permutationtable::{NoiseHasher, PermutationTable},
-};
+use crate::{math, noise_fns::{NoiseFn, Seedable}, permutationtable::{NoiseHasher, PermutationTable}, WrapRc};
 
 /// Noise function that outputs Worley noise.
 pub struct Worley {
@@ -142,6 +138,8 @@ pub mod distance_functions {
         result
     }
 }
+
+impl WrapRc for Worley {}
 
 impl NoiseFn<f64, 2> for Worley {
     fn get(&self, point: [f64; 2]) -> f64 {

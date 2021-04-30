@@ -1,9 +1,5 @@
 use crate::math::s_curve::quintic::Quintic;
-use crate::{
-    math::{self, interpolate},
-    noise_fns::{NoiseFn, Seedable},
-    permutationtable::{NoiseHasher, PermutationTable},
-};
+use crate::{math::{self, interpolate}, noise_fns::{NoiseFn, Seedable}, permutationtable::{NoiseHasher, PermutationTable}, WrapRc};
 
 /// Noise function that outputs 2/3/4-dimensional Value noise.
 #[derive(Clone, Copy, Debug)]
@@ -48,6 +44,8 @@ impl Seedable for Value {
         self.seed
     }
 }
+
+impl WrapRc for Value {}
 
 /// 2-dimensional value noise
 impl NoiseFn<f64, 2> for Value {

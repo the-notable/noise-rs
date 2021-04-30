@@ -1,5 +1,6 @@
 use crate::noise_fns::NoiseFn;
 use std::rc::Rc;
+use crate::WrapRc;
 
 /// Noise function that outputs the larger of the two output values from two source
 /// functions.
@@ -16,6 +17,8 @@ impl<T, const DIM: usize> Max<T, DIM> {
         Self { source1, source2 }
     }
 }
+
+impl<T, const DIM: usize> WrapRc for Max<T, DIM> {}
 
 impl<T, const DIM: usize> NoiseFn<T, DIM> for Max<T, DIM>
 where

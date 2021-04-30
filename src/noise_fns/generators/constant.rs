@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that outputs a constant value.
 ///
@@ -18,6 +19,8 @@ impl Constant {
         Self { value }
     }
 }
+
+impl WrapRc for Constant {}
 
 impl<T: Copy, const N: usize> NoiseFn<T, N> for Constant {
     fn get(&self, _point: [T; N]) -> f64 {

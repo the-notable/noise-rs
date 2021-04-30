@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that moves the coordinates of the input value before
 /// returning the output value from the source function.
@@ -102,6 +103,8 @@ impl<Source> TranslatePoint<Source> {
         }
     }
 }
+
+impl<Source> WrapRc for TranslatePoint<Source> {}
 
 impl<Source> NoiseFn<f64, 2> for TranslatePoint<Source>
 where

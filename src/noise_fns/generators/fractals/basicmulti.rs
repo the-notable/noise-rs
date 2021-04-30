@@ -1,4 +1,4 @@
-use crate::math;
+use crate::{math, WrapRc};
 
 use crate::noise_fns::{MultiFractal, NoiseFn, Perlin, Seedable};
 
@@ -119,6 +119,8 @@ impl Seedable for BasicMulti {
         self.seed
     }
 }
+
+impl WrapRc for BasicMulti {}
 
 /// 2-dimensional `BasicMulti` noise
 impl NoiseFn<f64, 2> for BasicMulti {

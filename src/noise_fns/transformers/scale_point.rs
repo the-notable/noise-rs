@@ -1,4 +1,5 @@
 use crate::noise_fns::NoiseFn;
+use crate::WrapRc;
 
 /// Noise function that scales the coordinates of the input value before
 /// returning the output value from the source function.
@@ -84,6 +85,8 @@ impl<Source> ScalePoint<Source> {
         }
     }
 }
+
+impl<Source> WrapRc for ScalePoint<Source> {}
 
 impl<Source> NoiseFn<f64, 2> for ScalePoint<Source>
 where

@@ -2,11 +2,7 @@
 //! Instead, these functions use the `OpenSimplex` algorithm, as detailed here:
 //! <http://uniblock.tumblr.com/post/97868843242/noise>
 
-use crate::{
-    gradient, math,
-    noise_fns::{NoiseFn, Seedable},
-    permutationtable::{NoiseHasher, PermutationTable},
-};
+use crate::{gradient, math, noise_fns::{NoiseFn, Seedable}, permutationtable::{NoiseHasher, PermutationTable}, WrapRc};
 use std::ops::Add;
 
 const STRETCH_CONSTANT_2D: f64 = -0.211_324_865_405_187; //(1/sqrt(2+1)-1)/2;
@@ -63,6 +59,8 @@ impl Seedable for OpenSimplex {
         self.seed
     }
 }
+
+impl WrapRc for OpenSimplex {}
 
 /// 2-dimensional [`OpenSimplex` Noise](http://uniblock.tumblr.com/post/97868843242/noise)
 ///
