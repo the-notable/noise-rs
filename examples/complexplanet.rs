@@ -4,6 +4,7 @@ use noise::{utils::*, *};
 use std::time::Instant;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+use std::ops::Div;
 
 /// This example demonstrates how to use the noise-rs library to generate
 /// terrain elevations for a complex planetary surface.
@@ -64,7 +65,12 @@ use rayon::iter::ParallelIterator;
 #[allow(non_snake_case)]
 fn main() {
 
-    let results = par_map_from_chunks(20);
+    let map = par_map_from_chunks(16);
+
+    ImageRenderer::new()
+        .set_gradient(ColorGradient::new().build_terrain_gradient())
+        .render(&map)
+        .write_to_file("unscaledFinalPlanet.png");
 
     // let settings = BuilderSettings::new(
     //     MapSize::new(100, 100),
@@ -102,8 +108,9 @@ fn main() {
 }
 
 fn par_map_from_chunks(size: usize) -> NoiseMap {
-    if size % 2 != 0 {
-        panic!("Only even sizes allowed");
+
+    if (size.div(4) as f64).sqrt().fract() > f64::EPSILON {
+        panic!("Invalid number of chunks provided. Number must divide evenly by 4, and the square root of the result must be a whole number, i.e. 4, 16, 36");
     }
 
     println!("Starting");
@@ -115,7 +122,7 @@ fn par_map_from_chunks(size: usize) -> NoiseMap {
     let mut builders: Vec<ChunkBuilder> = Vec::with_capacity(size * size);
     for x in (min..max).into_iter() {
         for y in (min..max).into_iter() {
-            builders.push(ChunkBuilder::new(x, y));
+            builders.push(ChunkBuilder::new(GridPosition(x, y)));
         }
     }
 
@@ -123,30 +130,31 @@ fn par_map_from_chunks(size: usize) -> NoiseMap {
 
     println!("Starting stitch together: {} seconds elapsed", now.elapsed().as_secs());
 
-    ImageRenderer::new()
-        .set_gradient(ColorGradient::new().build_terrain_gradient())
-        .render(&chunks[10].map)
-        .write_to_file("unscaledFinalPlanet1.png");
+    let dim_size = size * BuilderSettings::CHUCK_SIZE;
+    let map = NoiseMap::new(dim_size, dim_size);
 
-    NoiseMap::new(5, 5)
-}
+    for (i, chunk) in chunks.iter().enumerate() {
 
-fn number_to_whole_parts(v: usize, n: usize) -> Vec<usize> {
-    if v % n == 0 {
-        let base = v/n;
-        return (0..n).into_iter().map(|_| base).collect();
     }
-
-    let base: usize = ((v / n) as f64).floor() as usize;
-    let rem = v - (base * n);
-    (0..n).into_iter().map(|i| {
-        if i <= rem {
-            base + 1
-        } else {
-            base
-        }
-    }).collect()
+    map
 }
+
+// fn number_to_whole_parts(v: usize, n: usize) -> Vec<usize> {
+//     if v % n == 0 {
+//         let base = v/n;
+//         return (0..n).into_iter().map(|_| base).collect();
+//     }
+//
+//     let base: usize = ((v / n) as f64).floor() as usize;
+//     let rem = v - (base * n);
+//     (0..n).into_iter().map(|i| {
+//         if i <= rem {
+//             base + 1
+//         } else {
+//             base
+//         }
+//     }).collect()
+// }
 
 // fn par_build_noise_map(settings: BuilderSettings) -> NoiseMap {
 //     println!("Starting");
@@ -307,32 +315,46 @@ impl MapSize {
     }
 }
 
+#[derive(Copy, Clone)]
+struct GridPosition(isize, isize);
+
 struct Chunk {
-    x: isize,
-    y: isize,
+    position: GridPosition,
     map: NoiseMap
 }
 
 impl Chunk {
-    pub fn new(x: isize, y: isize, map: NoiseMap) -> Self {
+    pub fn new(position: GridPosition, map: NoiseMap) -> Self {
         Self {
-            x,
-            y,
+            position,
             map
         }
+    }
+
+    pub fn get_coords(&self) -> GridPosition { self.position }
+
+    pub fn get_map_data(&self) -> Vec<(f64, f64, f64)> {
+        let GridPosition(x_pos, y_pos) = self.position;
+        let BuilderSettings{size, x_bounds, y_bounds} = BuilderSettings::from_grid_coords(x_pos, y_pos);
+
+        let mut v: Vec<(f64, f64, f64)> = Vec::with_capacity(size.width * size.height);
+        for x in size.width {
+            for y in size.height {
+                v.push((x, y, self.map.get_value(x, y)));
+            }
+        }
+        v
     }
 }
 
 struct ChunkBuilder {
-    x: isize,
-    y: isize
+    position: GridPosition
 }
 
 impl ChunkBuilder {
-    pub fn new(x: isize, y: isize) -> Self {
+    pub fn new(position: GridPosition) -> Self {
         Self {
-            x,
-            y
+            position
         }
     }
 
@@ -2049,13 +2071,14 @@ impl ChunkBuilder {
             Box::new(unscaledFinalPlanet)
         };
 
-        let BuilderSettings{size, x_bounds, y_bounds} = BuilderSettings::from_grid_coords(self.x, self.y);
+        let GridPosition(x, y) = self.position;
+        let BuilderSettings{size, x_bounds, y_bounds} = BuilderSettings::from_grid_coords(x, y);
         let map = PlaneMapBuilder::new(&*world_mod())
             .set_size(size.width, size.height)
             .set_x_bounds(x_bounds.lower, x_bounds.upper)
             .set_y_bounds(y_bounds.lower, y_bounds.upper)
             .build();
 
-        Chunk::new(self.x, self.y, map)
+        Chunk::new(self.position, map)
     }
 }
