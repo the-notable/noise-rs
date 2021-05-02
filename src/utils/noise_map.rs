@@ -67,7 +67,8 @@ impl NoiseMap {
         if x < width && y < height {
             self.map[x + y * width] = value;
         } else {
-            eprintln!("input point out of bounds")
+            //eprintln!("input point out of bounds");
+            eprintln!("x: {}, width: {} | y: {}, height: {}", x, width, y, height)
         }
     }
 

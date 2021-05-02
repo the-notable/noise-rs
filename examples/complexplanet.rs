@@ -65,7 +65,7 @@ use std::ops::Div;
 #[allow(non_snake_case)]
 fn main() {
 
-    let map = par_map_from_chunks(16);
+    let map = par_map_from_chunks(400);
 
     ImageRenderer::new()
         .set_gradient(ColorGradient::new().build_terrain_gradient())
@@ -109,19 +109,25 @@ fn main() {
 
 fn par_map_from_chunks(size: usize) -> NoiseMap {
 
-    if (size.div(4) as f64).sqrt().fract() > f64::EPSILON {
+    eprintln!("Starting");
+
+    let max = (size.div(4) as f64).sqrt();
+
+    if max.fract() > f64::EPSILON {
         panic!("Invalid number of chunks provided. Number must divide evenly by 4, and the square root of the result must be a whole number, i.e. 4, 16, 36");
     }
 
-    println!("Starting");
     let now = Instant::now();
 
-    let max: isize = (size / 2) as isize;
-    let min: isize = max * -1;
+    let max = max as isize;
+    let min = max * -1;
+    let extent = max - min;
 
     let mut builders: Vec<ChunkBuilder> = Vec::with_capacity(size * size);
-    for x in (min..max).into_iter() {
-        for y in (min..max).into_iter() {
+    for x in (min..max + 1).into_iter() {
+        if x == 0 { continue }
+        for y in (min..max + 1).into_iter() {
+            if y == 0 { continue }
             builders.push(ChunkBuilder::new(GridPosition(x, y)));
         }
     }
@@ -130,12 +136,38 @@ fn par_map_from_chunks(size: usize) -> NoiseMap {
 
     println!("Starting stitch together: {} seconds elapsed", now.elapsed().as_secs());
 
-    let dim_size = size * BuilderSettings::CHUCK_SIZE;
-    let map = NoiseMap::new(dim_size, dim_size);
+    let extent_dim = Chunk::SIZE * extent;
+    let half_extent_dim = extent_dim / 2;
+    let mut map = NoiseMap::new(extent_dim as usize, extent_dim as usize);
 
-    for (i, chunk) in chunks.iter().enumerate() {
+    for chunk in chunks.iter() {
+        for (x, y, z) in chunk.get_map_values() {
+            let mut adj_x = x;
+            let mut adj_y = y;
+            // if x < 0 {
+            //     adj_x = half_extent_dim + x
+            // } else {
+            //     adj_x = x + (extent_dim as isize) / 2
+            // }
+            // if y < 0 {
+            //     adj_y = y.abs()
+            // } else {
+            //     adj_y = y + (extent_dim as isize) / 2
+            // }
 
+            adj_x = half_extent_dim + x;
+            adj_y = half_extent_dim + y;
+
+            //if chunk.get_coords() == GridPosition(-3, -3) {
+                //eprintln!("x: {}, adj_x: {}", x, adj_x);
+                //eprintln!("y: {}, adj_y: {}", y, adj_y);
+                map.set_value(adj_x as usize, adj_y as usize, z);
+            //}
+
+        }
     }
+    eprintln!("chunks: {}, min: {}, max: {}, extent: {}, extent_dim: {}", chunks.iter().count(),min, max, extent, extent_dim);
+    println!("Starting stitch together: {} seconds elapsed", now.elapsed().as_secs());
     map
 }
 
@@ -245,8 +277,6 @@ struct BuilderSettings {
 }
 
 impl BuilderSettings {
-    const DIM_PER_CHUNK: f64 = 0.01;
-    const CHUCK_SIZE: usize = 24;
 
     pub fn new(size: MapSize, x_bounds: AxisBounds, y_bounds: AxisBounds) -> Self {
         Self {
@@ -258,7 +288,7 @@ impl BuilderSettings {
 
     pub fn from_grid_coords(x: isize, y: isize) -> Self {
         Self {
-            size: MapSize::new(Self::CHUCK_SIZE, Self::CHUCK_SIZE),
+            size: MapSize::new(Chunk::SIZE as usize, Chunk::SIZE as usize),
             x_bounds: AxisBounds::new(Self::min_bound(x), Self::max_bound(x)),
             y_bounds: AxisBounds::new(Self::min_bound(y), Self::max_bound(y))
         }
@@ -266,17 +296,17 @@ impl BuilderSettings {
 
     fn min_bound(v: isize) -> f64 {
         if v < 0 {
-            v as f64 * Self::DIM_PER_CHUNK
+            v as f64 * Chunk::DIM_PER_CHUNK
         } else {
-            (v as f64 * Self::DIM_PER_CHUNK) - Self::DIM_PER_CHUNK
+            (v as f64 * Chunk::DIM_PER_CHUNK) - Chunk::DIM_PER_CHUNK
         }
     }
 
     fn max_bound(v: isize) -> f64 {
         if v < 0 {
-            (v as f64 * Self::DIM_PER_CHUNK) + Self::DIM_PER_CHUNK
+            (v as f64 * Chunk::DIM_PER_CHUNK) + Chunk::DIM_PER_CHUNK
         } else {
-            v as f64 * Self::DIM_PER_CHUNK
+            v as f64 * Chunk::DIM_PER_CHUNK
         }
     }
 }
@@ -315,7 +345,7 @@ impl MapSize {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct GridPosition(isize, isize);
 
 struct Chunk {
@@ -324,6 +354,9 @@ struct Chunk {
 }
 
 impl Chunk {
+    const DIM_PER_CHUNK: f64 = 0.1;
+    const SIZE: isize = 52;
+
     pub fn new(position: GridPosition, map: NoiseMap) -> Self {
         Self {
             position,
@@ -333,17 +366,57 @@ impl Chunk {
 
     pub fn get_coords(&self) -> GridPosition { self.position }
 
-    pub fn get_map_data(&self) -> Vec<(f64, f64, f64)> {
+    pub fn get_map_values(&self) -> Vec<(isize, isize, f64)> {
         let GridPosition(x_pos, y_pos) = self.position;
-        let BuilderSettings{size, x_bounds, y_bounds} = BuilderSettings::from_grid_coords(x_pos, y_pos);
+        let size = BuilderSettings::from_grid_coords(x_pos, y_pos).size;
 
-        let mut v: Vec<(f64, f64, f64)> = Vec::with_capacity(size.width * size.height);
-        for x in size.width {
-            for y in size.height {
-                v.push((x, y, self.map.get_value(x, y)));
+        let mut v: Vec<(isize, isize, f64)> = Vec::with_capacity(size.width * size.height);
+        let mut scaled_x = self.min_x();
+        for x in 0..size.width {
+            let mut scaled_y = self.min_y();
+            for y in 0..size.height {
+                v.push((scaled_x, scaled_y, self.map.get_value(x, y)));
+                scaled_y = scaled_y + 1;
             }
+            scaled_x = scaled_x + 1;
         }
         v
+    }
+
+    pub fn min_x(&self) -> isize {
+        get_min(self.position.0)
+    }
+
+    pub fn max_x(&self) -> isize {
+        get_max(self.position.0)
+    }
+
+    pub fn min_y(&self) -> isize {
+        get_min(self.position.1)
+    }
+
+    pub fn max_y(&self) -> isize {
+        get_max(self.position.1)
+    }
+}
+
+fn get_min(v: isize) -> isize {
+    if v < 0 {
+        (v * Chunk::SIZE)
+    } else if v > 0 {
+        (v * Chunk::SIZE) - Chunk::SIZE
+    } else {
+        panic!("Grid axis value cannot be zero");
+    }
+}
+
+fn get_max(v: isize) -> isize {
+    if v < 0 {
+        (v * Chunk::SIZE) + Chunk::SIZE
+    } else if v > 0 {
+        (v * Chunk::SIZE)
+    } else {
+        panic!("Illegal axis value");
     }
 }
 
