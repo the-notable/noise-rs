@@ -167,6 +167,7 @@ fn par_map_from_chunks(size: usize) -> NoiseMap {
         }
     }
     eprintln!("chunks: {}, min: {}, max: {}, extent: {}, extent_dim: {}", chunks.iter().count(),min, max, extent, extent_dim);
+    eprintln!("Map Size: {} bytes", std::mem::size_of_val(&map));
     println!("Starting stitch together: {} seconds elapsed", now.elapsed().as_secs());
     map
 }
