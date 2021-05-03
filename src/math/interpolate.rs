@@ -4,7 +4,7 @@ use std::ops::{Add, Mul, Sub};
 /// Performs linear interpolation between two values.
 #[cfg(not(target_os = "emscripten"))]
 #[inline]
-pub(crate) fn linear<T>(a: T, b: T, x: T) -> T
+pub fn linear<T>(a: T, b: T, x: T) -> T
 where
     T: MulAdd<Output = T> + Sub<Output = T> + Copy,
 {
@@ -34,7 +34,7 @@ where
 /// 0.0, this function returns _n1_. If the alpha value is 1.0, this
 /// function returns _n2_.
 #[inline]
-pub(crate) fn cubic<T>(n0: T, n1: T, n2: T, n3: T, alpha: T) -> T
+pub fn cubic<T>(n0: T, n1: T, n2: T, n3: T, alpha: T) -> T
 where
     T: Add<Output = T> + Mul<Output = T> + Sub<Output = T> + Copy,
 {

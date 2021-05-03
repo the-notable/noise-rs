@@ -3,7 +3,7 @@
 
 use std::ops::{Add, Mul, Sub};
 
-pub(crate) mod interpolate;
+pub mod interpolate;
 pub(crate) mod s_curve;
 
 /// Cast a numeric type without having to unwrap - we don't expect any overflow
